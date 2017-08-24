@@ -1,0 +1,23 @@
+{
+  "name": "Blank Devlord WebApp",
+  "description": "",
+  "version": "0.0.1",
+  "repository": {
+    "type": "git",
+    "url": ""
+  },
+  "main": "./index.js",
+  "directories": {
+  },
+  "engines": {
+    "node": ">=0.4.0"
+  },
+  "dependencies": {
+  },
+  "devDependencies": {},
+  "license": "MIT",
+  "author": {
+    "name": "Dustin Harris",
+    "email": "dmhzmxn@gmail.com"
+  }
+}
