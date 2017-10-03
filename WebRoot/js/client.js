@@ -18,7 +18,3 @@ socket.on('disconnect', function () {
 socket.on('forceRefresh', function () {
     window.location.reload()
 });
-engine.init('viewport')
-
-
-
