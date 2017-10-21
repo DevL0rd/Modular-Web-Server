@@ -9,7 +9,6 @@ var os = require('os');
 var fs = require('fs');
 var http = require('http');
 var crypto = require('crypto');
-var Engine = require('./Engine');
 var DB = require('./Devlord_modules/DB.js');
 
 //
@@ -39,12 +38,15 @@ server.timeout = settings.HTTP_TIMEOUT_MS;
 //startServer
 Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "HTTP");
 server.listen(settings.PORT, settings.IP);
-io.generate_key = function() {
+io.generate_key = function () {
     var sha = crypto.createHash('sha256');
     sha.update(Math.random().toString());
     return sha.digest('hex');
 }
-Engine.init(io)
+
+function log(str, isError = false, nameSpace = "Server") {
+    Logging.log(str, isError, nameSpace);
+}
 
 function Http_Handler(request, response) {
     // Parse the request containing file name
@@ -55,12 +57,12 @@ function Http_Handler(request, response) {
     var extension = pathname.substr(1).split('.').pop();
 
     var FileFound = false;
-    if (fs.existsSync('WebRoot/' + pathname.substr(1))) {
+    if (fs.existsSync('./Plugins/WebRoot/' + pathname.substr(1))) {
         FileFound = true
     }
     if (FileFound) {
         // Read the requested file content from file system
-        fs.readFile('WebRoot/' + pathname.substr(1), function(err, data) {
+        fs.readFile('./Plugins/WebRoot/' + pathname.substr(1), function (err, data) {
             if (extension == "html" || extension == "htm" || extension == "js" || extension == "json") {
                 response.writeHead(200, {
                     'Content-Type': 'text/html',
@@ -146,15 +148,71 @@ function Http_Handler(request, response) {
     };
 
 }
-server.on('error', function(err) {
+server.on('error', function (err) {
     Logging.log(err, true, "HTTP");
 });
-server.on('uncaughtException', function(err) {
+server.on('uncaughtException', function (err) {
     Logging.log(err, true, "HTTP");
 });
-io.on('error', function(err) {
+io.on('error', function (err) {
     Logging.log(err, true, "IO");
 });
-io.on('uncaughtException', function(err) {
+io.on('uncaughtException', function (err) {
     Logging.log(err, true, "IO");
+});
+
+//Statistics and io tracking
+io.connectioncount = 0;
+io.clientcount = 0;
+io.IP_BAN_LIST = [];
+//on io connection, setup client data
+io.on('connection', function (socket) {
+    //if connection is in ban list then show error and disconnect socket
+    if (socket.request.connection.remoteAddress in io.IP_BAN_LIST) {
+        log("[" + socket.request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + io.IP_BAN_LIST[socket.request.connection.remoteAddress].reason + ")", true, "IO");
+        socket.disconnect()
+    } else {
+        log("[" + socket.request.connection.remoteAddress + "] Connected! ", false, "IO");
+        io.connectioncount++
+            io.clientcount++
+            //generate users sessionID to prevent man in middle
+            socket.sessionID = io.generate_key()
+        socket.on('disconnect', function (data) {
+            log("[" + this.request.connection.remoteAddress + "] Disconnected", false, "IO");
+            io.clientcount--
+        });
+        socket.on('ping', function (data) {
+            IO.emit('pong', socket.isHosting);
+        })
+    }
+});
+var plugins = require('require-all')({
+    dirname: __dirname + '/Plugins',
+    recursive: false
+});
+var commands = {}
+commands.refresh = function () {
+    Logging.log("Forcing clients to refresh.")
+    io.emit("forceRefresh", {})
+}
+
+
+Logging.log("Loading DevL0rd modular Web Server Plugins...")
+for (var i in plugins) {
+    Logging.log("Plugin '" + i + "' loaded.")
+    plugins[i].init(settings, io, log, commands);
+}
+process.stdin.on('data', function (line) {
+    var message = line.toString().replace("\r\n", "").replace("\n", "")
+    var messageLowercase = message.toLowerCase();
+    var arguments = messageLowercase.split("");
+    arguments.shift()
+    //Commands
+    if (commands[messageLowercase] != null) {
+        commands[messageLowercase](message, messageLowercase, arguments);
+    } else if (commands[messageLowercase.split(" ")[0]] != null) {
+        commands[messageLowercase.split(" ")[0]](message, messageLowercase, arguments);
+    } else {
+        Logging.log("Unknown command '" + messageLowercase + "'.")
+    }
 });
