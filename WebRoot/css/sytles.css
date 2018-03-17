@@ -1,0 +1,123 @@
+body {
+    margin-top: 0px;
+    margin-bottom: 0px;
+    margin-left: 0px;
+    margin-right: 0px;
+    padding: 0;
+    overflow: hidden;
+    background-size: cover;
+    font-family: "calibri";
+    background: #1e1e1e;
+}
+
+a:link {
+    color: white;
+    text-decoration: none;
+}
+
+a:visited {
+    color: white;
+    text-decoration: none;
+}
+
+a:hover {
+    color: white;
+    text-decoration: none;
+}
+
+a:active {
+    color: white;
+    text-decoration: none;
+}
+
+
+#pageCover {
+    position: absolute;
+    z-index: 3;
+    top: 0px;
+    left: 0px;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+}
+
+#login {
+    width: 250px;
+    height: 170px;
+    background-color: burlywood;
+    margin: auto;
+    margin-top: 50px;
+    border-radius: 10px;
+    overflow: hidden;
+    background: rgb(125, 126, 125);
+    /* Old browsers */
+    background: -moz-linear-gradient(top, rgba(125, 126, 125, 1) 0%, rgba(14, 14, 14, 1) 100%);
+    /* FF3.6-15 */
+    background: -webkit-linear-gradient(top, rgba(125, 126, 125, 1) 0%, rgba(14, 14, 14, 1) 100%);
+    /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(to bottom, rgba(125, 126, 125, 1) 0%, rgba(14, 14, 14, 1) 100%);
+    /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#7d7e7d', endColorstr='#0e0e0e', GradientType=0);
+    /* IE6-9 */
+    box-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.2), 0 6px 20px 0 rgba(0, 0, 0, 0.19);
+}
+
+#login_pswdcheck {
+    display: none;
+}
+
+#loginOutput {
+    font-size: 18px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+    color: white;
+    background-color: black;
+    background: rgb(125, 126, 125);
+    /* Old browsers */
+    background: -moz-linear-gradient(top, rgba(125, 126, 125, 1) 0%, rgba(14, 14, 14, 1) 100%);
+    /* FF3.6-15 */
+    background: -webkit-linear-gradient(top, rgba(125, 126, 125, 1) 0%, rgba(14, 14, 14, 1) 100%);
+    /* Chrome10-25,Safari5.1-6 */
+    background: linear-gradient(to bottom, rgba(125, 126, 125, 1) 0%, rgba(14, 14, 14, 1) 100%);
+    /* W3C, IE10+, FF16+, Chrome26+, Opera12+, Safari7+ */
+    filter: progid:DXImageTransform.Microsoft.gradient( startColorstr='#7d7e7d', endColorstr='#0e0e0e', GradientType=0);
+    /* IE6-9 */
+}
+
+.login_inputs {
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    border: none;
+    color: white;
+    margin-top: 5px;
+    margin-left: 15px;
+    width: calc(100% - 25px);
+    padding-left: 5px;
+    padding-top: 5px;
+    padding-bottom: 5px;
+}
+
+#login_button {
+    margin-top: 5px;
+    margin-left: 15px;
+    width: calc(100% - 25px);
+    -webkit-transition-duration: 0.4s;
+    /* Safari */
+    transition-duration: 0.4s;
+    border-radius: 8px;
+    border: none;
+    color: white;
+    background-color: #2776b2;
+    padding: 5px 24px;
+    font-size: 15px;
+}
+
+#login_button:hover {
+    background-color: #2684cc;
+    /* Green */
+    color: white;
+}
+
+#registerLink {
+    margin-top: 5px;
+}

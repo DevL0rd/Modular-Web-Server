@@ -1,7 +1,7 @@
-//Authour: DevL0rd
+//Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
 //Last Update: 5/18/2017
-//Version: 0.1.6
+//Version: 1.0.0
 var fs = require('fs');
 
 var NameSpace = "DevlordProject"
@@ -10,18 +10,22 @@ var consoleLogging = true
 if (!fs.existsSync(LoggingDir)) {
     fs.mkdirSync(LoggingDir);
 }
+
 function setNamespace(str) {
     NameSpace = str
 }
+
 function setConsoleLogging(bool) {
     consoleLogging = bool
 }
+
 function setLoggingDir(str) {
     LoggingDir = str
     if (!fs.existsSync(LoggingDir)) {
         fs.mkdirSync(LoggingDir);
     }
 }
+
 function timeStamp() {
     // Create a date object with the current time
     var now = new Date();
@@ -51,6 +55,7 @@ function timeStamp() {
     // Return the formatted string
     return date.join("/") + " " + time.join(":") + " " + suffix;
 }
+
 function log(str, isError = false, NameSpaceStr = NameSpace) {
     var now = new Date();
     var date = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
