@@ -18,7 +18,6 @@
         "socket.io": "latest",
         "mime-types": "latest",
         "require-all": "latest",
-        "youtube-parser": "latest",
         "mkdirp": "latest"
     },
     "devDependencies": {},
