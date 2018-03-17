@@ -68,9 +68,10 @@ function Http_HandlerNew(request, response) {
         });
         request.on('end', function () {
 
-            log("<POST> " + body, false, "HTTP");
+            log("<POST> received.", false, "HTTP");
+            body = JSON.parse(body)
             for (i in events["post"]) {
-                events["post"][i](request, response, data);
+                events["post"][i](request, response, body);
             }
         });
 
@@ -222,7 +223,7 @@ for (var i in plugins) {
 process.stdin.on('data', function (line) {
     var message = line.toString().replace("\r\n", "").replace("\n", "")
     var messageLowercase = message.toLowerCase();
-    var arguments = messageLowercase.split(" ");
+    var arguments = messageLowercase.split("");
     arguments.shift()
     //Commands
     if (commands[messageLowercase] != null) {

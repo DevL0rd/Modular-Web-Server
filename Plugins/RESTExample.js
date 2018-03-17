@@ -7,7 +7,10 @@ function init(settings, events, io, log, commands) {
         response.writeHead(200, {
             'Content-Type': 'text/html'
         });
-        response.end('post received');
+        var reponseData = {
+            data: "post received"
+        }
+        response.end(JSON.stringify(reponseData));
     })
 }
 
