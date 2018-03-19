@@ -5,7 +5,7 @@
 function init(settings, events, io, log, commands) {
     events.on("post", function (request, response, body) {
         response.writeHead(200, {
-            'Content-Type': 'text/html'
+            'Content-Type': 'application/json'
         });
         var reponseData = {
             data: "post received"
