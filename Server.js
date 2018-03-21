@@ -29,6 +29,7 @@ if (fs.existsSync("./config.json")) {
         IP: "0.0.0.0",
         PORT: 80,
         HTTP_TIMEOUT_MS: 5000,
+        bitRate: 1024,
         webRoot: "./WebRoot",
         directoryIndex: ["index.html"],
         blockedPaths: [],
@@ -104,22 +105,41 @@ function Http_HandlerNew(request, response) {
                     var parts = range.replace(/bytes=/, "").split("-");
                     var partialstart = parts[0];
                     var partialend = parts[1];
+
                     var start = parseInt(partialstart, 10);
-                    var end = partialend ? parseInt(partialend, 10) : total - 1;
-                    var chunksize = (end - start) + 1;
-                    log("<GET> 206 '" + reqPath + "' with byte range " + start + "-" + end + " (" + chunksize + " bytes)", false, "HTTP");
-                    var file = fs.createReadStream(fullPath, {
-                        start: start,
-                        end: end
-                    });
-                    var contentType = mime.lookup(reqPath)
-                    response.writeHead(206, {
-                        'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
-                        'Accept-Ranges': 'bytes',
-                        'Content-Length': chunksize,
-                        'Content-Type': contentType
-                    });
-                    file.pipe(response);
+                    if (start >= 0) {
+                        var defaultEnd = start + settings.bitRate;
+                        var end = partialend ? parseInt(partialend, 10) : defaultEnd;
+                        if (end > total - 1) {
+                            end = total - 1
+                        }
+                        var chunksize = (end - start) + 1;
+                        if (chunksize > settings.bitRate) {
+                            end = start + settings.bitRate;
+                            if (end > total - 1) {
+                                end = total - 1
+                            }
+                            chunksize = (end - start) + 1;
+                        }
+
+                        log("<GET> 206 '" + reqPath + "' with byte range " + start + "-" + end + " (" + chunksize + " bytes)", false, "HTTP");
+                        var file = fs.createReadStream(fullPath, {
+                            start: start,
+                            end: end
+                        });
+                        var contentType = mime.lookup(reqPath)
+                        response.writeHead(206, {
+                            'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+                            'Accept-Ranges': 'bytes',
+                            'Content-Length': chunksize,
+                            'Content-Type': contentType
+                        });
+                        file.pipe(response);
+                    } else {
+                        log("<GET> 416 '" + reqPath + "' Invalid byte range!", true, "HTTP");
+                        response.writeHead(416)
+                        response.end()
+                    }
                 } else {
                     log("<GET> 200 '" + reqPath + "' sent." + " (" + total + " bytes)", false, "HTTP");
                     var contentType = mime.lookup(reqPath)
@@ -131,17 +151,17 @@ function Http_HandlerNew(request, response) {
                 }
             } else {
 
-                log("<GET> 403 '" + reqPath + "' ACCESS DENIED!", false, "HTTP");
+                log("<GET> 403 '" + reqPath + "' ACCESS DENIED!", true, "HTTP");
                 response.writeHead(403)
                 response.end()
             }
         } else {
-            log("<GET> 404 '" + reqPath + "' not found!", false, "HTTP");
+            log("<GET> 404 '" + reqPath + "' not found!", true, "HTTP");
             response.writeHead(404)
             response.end()
         }
     } else {
-        log("<UNKOWN METHOD> 501", false, "HTTP");
+        log("<UNKOWN METHOD> 501", true, "HTTP");
         response.writeHead(501, {
             'Content-Type': 'text/html'
         })
