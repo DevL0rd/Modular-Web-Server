@@ -144,7 +144,7 @@ function Http_HandlerNew(request, response) {
 
                             var start = parseInt(partialstart, 10);
                             if (start >= 0) {
-                                var bitrateInBytes = bitRateKB * 1000
+                                var bitrateInBytes = settings.bitRateKB * 1000
                                 var defaultEnd = start + bitrateInBytes;
                                 var end = partialend ? parseInt(partialend, 10) : defaultEnd;
                                 if (end > total - 1) {
