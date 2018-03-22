@@ -86,7 +86,7 @@ io.on('connection', function (socket) {
         Logging.log("[" + socket.request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + io.IP_BAN_LIST[socket.request.connection.remoteAddress].reason + ")", true, "IO");
         socket.disconnect()
     } else {
-        Logging.log("[" + socket.request.connection.remoteAddress + "] Connected! ", "IO");
+        Logging.log("[" + socket.request.connection.remoteAddress + "] Connected! ", false, "IO");
         io.connectioncount++
             io.clientcount++
             for (i in events["connection"]) {
@@ -94,7 +94,7 @@ io.on('connection', function (socket) {
             }
         io.emit('connectionCount', io.clientcount)
         socket.on('disconnect', function (data) {
-            Logging.log("[" + this.request.connection.remoteAddress + "] Disconnected", "IO");
+            Logging.log("[" + this.request.connection.remoteAddress + "] Disconnected", false, "IO");
             io.clientcount--;
             for (i in events["disconnect"]) {
                 events["disconnect"][i](socket)
