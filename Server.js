@@ -35,6 +35,7 @@ if (fs.existsSync("./config.json")) {
         applicationDownloadThrottleMB: 10,
         generalDownloadThrottleMB: 2,
         maxUrlLength: 2048,
+        "Cache-Control": "max-age=86400",
         "X-Frame-Options": "SAMEORIGIN",
         "X-XSS-Protection": "1; mode=block",
         "X-Content-Type-Options": "nosniff",
@@ -220,6 +221,7 @@ function Http_HandlerNew(request, response) {
                                     'Accept-Ranges': 'bytes',
                                     'Content-Length': chunksize,
                                     'Content-Type': contentType,
+                                    "Cache-Control": settings["Cache-Control"],
                                     "Last-Modified": stat.mtime.toUTCString()
                                 });
                                 try {
@@ -262,6 +264,7 @@ function Http_HandlerNew(request, response) {
                                     "X-Content-Type-Options": settings["X-Content-Type-Options"],
                                     'Content-Length': total,
                                     'Content-Type': contentType,
+                                    "Cache-Control": settings["Cache-Control"],
                                     "Last-Modified": stat.mtime.toUTCString()
                                 });
                                 try {
