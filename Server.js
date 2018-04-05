@@ -123,7 +123,7 @@ var plugins = require('require-all')({
 for (var i in plugins) {
     Logging.log("Plugin '" + i + "' loaded.", false, "Server")
     Logging.setNamespace('Plugin');
-    plugins[i].init(settings, events, io, Logging.log, commands);
+    plugins[i].init(plugins, settings, events, io, Logging.log, commands);
     Logging.setNamespace('HTTP');
 }
 
