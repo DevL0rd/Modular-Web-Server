@@ -80,10 +80,10 @@ io.generate_key = function () {
     return sha.digest('hex');
 }
 io.on('error', function (err) {
-    Logging.log(err, true, "IO");
+    Logging.log("ERROR: " + err, true, "IO");
 });
 io.on('uncaughtException', function (err) {
-    Logging.log(err, true, "IO");
+    Logging.log("ERROR: " + err, true, "IO");
 });
 io.on('connection', function (socket) {
     if (socket.request.connection.remoteAddress in io.IP_BAN_LIST) {
@@ -311,10 +311,10 @@ function Http_HandlerNew(request, response) {
 }
 
 server.on('error', function (err) {
-    Logging.log(err, true, "Server");
+    Logging.log("ERROR: " + err, true, "Server");
 });
 server.on('uncaughtException', function (err) {
-    Logging.log(err, true, "Server");
+    Logging.log("ERROR: " + err, true, "Server");
 });
 
 Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "Server");
