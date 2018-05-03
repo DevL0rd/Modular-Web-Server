@@ -272,7 +272,7 @@ function Http_Handler(request, response) {
         fs.exists(fullPath, function (exists) {
             if (exists) {
                 if (request.headers['range']) {
-                    sendByteRange(reqPath, request, response, function () {
+                    sendByteRange(reqPath, request, response, function (start, end) {
                         var executionTime = new Date().getTime() - startTime;
                         Logging.log("<GET> '" + reqPath + "' byte range " + start + "-" + end + " (" + executionTime + "ms)");
                     });
@@ -365,7 +365,7 @@ function sendByteRange(reqPath, request, response, callback) {
             });
             pipeFileToResponse(fileStream, mimeType, response);
             fileStream.on('end', () => {
-                callback();
+                callback(start, end);
             });
         } else {
             Logging.log("<GET> '" + reqPath + "' Invalid byte range!", true);
@@ -375,9 +375,11 @@ function sendByteRange(reqPath, request, response, callback) {
     });
 
 }
+
 function getMime(path) {
     return mime.lookup(path) || 'application/octet-stream';
 }
+
 function isBlocked(reqPath) {
     var filename = reqPath.replace(/^.*[\\\/]/, '')
     var directory = reqPath.substring(0, reqPath.lastIndexOf("/"));
