@@ -6,7 +6,7 @@ If I have missed any useful features feel free to let me know, or make a pull re
   - Comes with socket.io built in for websocket support through plugins.
   - Completely configurable.
   
-### Installation and configuration
+## Installation and configuration
 Modular Web Server requires [Node.js](https://nodejs.org/) v4+ to run.
 - Download the server and extract.
 - Install the dependencies.
@@ -33,11 +33,11 @@ Modular Web Server requires [Node.js](https://nodejs.org/) v4+ to run.
     ```
 - Other optional configuration can be done in the config file. The configuration is pretty straight forward so I'll skip documenting that here.
 
-### Installing plugins
+## Installing plugins
 - Drop you plugins .js file into the plugins folder.
 - If the plugin has any dependencies, make sure to install them!
 
-### Creating plugins
+## Creating plugins
 Here comes the fun part!
 - Adding new commands to the server's console.
     ```javascript
@@ -122,8 +122,7 @@ Here comes the fun part!
     exports.init = init;
     exports.users = users; //Make sure the users structure is exported
     ```
-## Events and how to use them
-    
+## Events and how to use them  
 - connection
 - disconnect
 - post
