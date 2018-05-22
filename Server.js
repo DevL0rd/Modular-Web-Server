@@ -22,9 +22,13 @@ Logging.setNamespace('HTTP');
 
 var cc = require('./Devlord_modules/conColors.js');
 var cs = require('./Devlord_modules/conSplash.js');
+var configPath = "./config.json"
+//get command line args
+if (process.argv[2]) configPath = process.argv[2];
 
-if (fs.existsSync("./config.json")) {
-    var settings = DB.load("./config.json")
+
+if (fs.existsSync(configPath)) {
+    var settings = DB.load(configPath)
 } else {
     var settings = {
         IP: "0.0.0.0",
@@ -64,7 +68,7 @@ if (fs.existsSync("./config.json")) {
             errorNamespacePrintFilter: []
         }
     }
-    DB.save("./config.json", settings)
+    DB.save(configPath, settings)
 }
 
 Logging.setLoggingDir(settings.logging.directory);
@@ -179,7 +183,7 @@ if (settings.pluginsPath && settings.pluginsPath != ""){
         if (file.split(".").pop() == "js") {
             plugins[file.split(".").shift()] = require(settings.pluginsPath + "/" + file);
         }
-      });
+    });
     for (var i in plugins) {
         Logging.log("Plugin '" + i + "' loaded.", false, "Server")
         Logging.setNamespace('Plugin');
@@ -187,7 +191,7 @@ if (settings.pluginsPath && settings.pluginsPath != ""){
         Logging.setNamespace('HTTP');
     }
 } else {
-    Logging.log("To use plugins please configure the directory in config.json", false, "Server")
+    Logging.log("To use plugins please configure the directory in '" + configPath + "'", false, "Server")
 }
 
 function Http_Handler(request, response) {
@@ -432,5 +436,5 @@ if (settings.webRoot && settings.webRoot != ""){
         }
     });
 } else {
-    Logging.log("ERROR: Please set webroot in config.json", true, "Server");
+    Logging.log("ERROR: Please set webroot in '" + configPath + "'", true, "Server");
 }
