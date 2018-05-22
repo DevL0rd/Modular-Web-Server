@@ -8,8 +8,8 @@
 	"directoryIndex": [
 		"index.html"
 	],
-	"pluginsPath": "",
-	"webRoot": "",
+	"pluginsPath": "../Chillspace/Plugins",
+	"webRoot": "../Chillspace/Webroot",
 	"throttling": {
 		"videoBitRateKB": 51000,
 		"audioBitRateKB": 230,

@@ -172,7 +172,7 @@ io.on('connection', function (socket) {
     });
 })
 
-if (settings.pluginsPath & settings.pluginsPath != ""){
+if (settings.pluginsPath && settings.pluginsPath != ""){
     Logging.log("Loading plugins...", false, "Server")
     var plugins = require('require-all')({
         dirname: settings.pluginsPath,
