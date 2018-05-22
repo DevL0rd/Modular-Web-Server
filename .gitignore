@@ -1,2 +1,4 @@
 node_modules/
-Logging/
+Logs/
+config.json
+package-lock.json

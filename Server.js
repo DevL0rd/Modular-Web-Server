@@ -34,7 +34,8 @@ if (fs.existsSync("./config.json")) {
         maxPostSizeMB: 8,
         maxUrlLength: 2048,
         directoryIndex: ["index.html"],
-        webRoot: "./WebRoot",
+        pluginsPath: "",
+        webRoot: "",
         throttling: {
             videoBitRateKB: 51000,
             audioBitRateKB: 230,
@@ -171,16 +172,20 @@ io.on('connection', function (socket) {
     });
 })
 
-Logging.log("Loading plugins...", false, "Server")
-var plugins = require('require-all')({
-    dirname: __dirname + '/Plugins',
-    recursive: false
-});
-for (var i in plugins) {
-    Logging.log("Plugin '" + i + "' loaded.", false, "Server")
-    Logging.setNamespace('Plugin');
-    plugins[i].init(plugins, settings, events, io, Logging.log, commands);
-    Logging.setNamespace('HTTP');
+if (settings.pluginsPath & settings.pluginsPath != ""){
+    Logging.log("Loading plugins...", false, "Server")
+    var plugins = require('require-all')({
+        dirname: settings.pluginsPath,
+        recursive: false
+    });
+    for (var i in plugins) {
+        Logging.log("Plugin '" + i + "' loaded.", false, "Server")
+        Logging.setNamespace('Plugin');
+        plugins[i].init(plugins, settings, events, io, Logging.log, commands);
+        Logging.setNamespace('HTTP');
+    }
+} else {
+    Logging.log("To use plugins please configure the directory in config.json", false, "Server")
 }
 
 function Http_Handler(request, response) {
@@ -407,21 +412,23 @@ server.on('error', function (err) {
 server.on('uncaughtException', function (err) {
     Logging.log("ERROR: " + err, true, "Server");
 });
-
-Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "Server");
-server.listen(settings.PORT, settings.IP);
-
-process.stdin.on('data', function (line) {
-    var message = line.toString().replace("\r\n", "").replace("\n", "")
-    var messageLowercase = message.toLowerCase();
-    var arguments = messageLowercase.split("");
-    arguments.shift()
-    //Commands
-    if (commands[messageLowercase] != null) {
-        commands[messageLowercase](message, messageLowercase, arguments);
-    } else if (commands[messageLowercase.split(" ")[0]] != null) {
-        commands[messageLowercase.split(" ")[0]](message, messageLowercase, arguments);
-    } else {
-        Logging.log("Unknown command '" + messageLowercase + "'.")
-    }
-});
+if (settings.webRoot && settings.webRoot != ""){
+    Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "Server");
+    server.listen(settings.PORT, settings.IP);
+    process.stdin.on('data', function (line) {
+        var message = line.toString().replace("\r\n", "").replace("\n", "")
+        var messageLowercase = message.toLowerCase();
+        var arguments = messageLowercase.split("");
+        arguments.shift()
+        //Commands
+        if (commands[messageLowercase] != null) {
+            commands[messageLowercase](message, messageLowercase, arguments);
+        } else if (commands[messageLowercase.split(" ")[0]] != null) {
+            commands[messageLowercase.split(" ")[0]](message, messageLowercase, arguments);
+        } else {
+            Logging.log("Unknown command '" + messageLowercase + "'.")
+        }
+    });
+} else {
+    Logging.log("ERROR: Please set webroot in config.json", true, "Server");
+}

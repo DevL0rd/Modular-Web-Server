@@ -8,7 +8,8 @@
 	"directoryIndex": [
 		"index.html"
 	],
-	"webRoot": "./WebRoot",
+	"pluginsPath": "",
+	"webRoot": "",
 	"throttling": {
 		"videoBitRateKB": 51000,
 		"audioBitRateKB": 230,
