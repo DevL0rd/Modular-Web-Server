@@ -174,10 +174,12 @@ io.on('connection', function (socket) {
 
 if (settings.pluginsPath && settings.pluginsPath != ""){
     Logging.log("Loading plugins...", false, "Server")
-    var plugins = require('require-all')({
-        dirname: settings.pluginsPath,
-        recursive: false
-    });
+    var plugins = [];
+    fs.readdirSync(settings.pluginsPath).forEach(function(file) {
+        if (file.split(".").pop() == "js") {
+            plugins[file.split(".").shift()] = require(settings.pluginsPath + "/" + file);
+        }
+      });
     for (var i in plugins) {
         Logging.log("Plugin '" + i + "' loaded.", false, "Server")
         Logging.setNamespace('Plugin');
