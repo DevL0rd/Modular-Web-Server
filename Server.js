@@ -428,9 +428,9 @@ if (settings.webRoot && settings.webRoot != ""){
         arguments.shift()
         //Commands
         if (commands[messageLowercase] != null) {
-            commands[messageLowercase](message, messageLowercase, arguments);
+            commands[messageLowercase](message, arguments);
         } else if (commands[messageLowercase.split(" ")[0]] != null) {
-            commands[messageLowercase.split(" ")[0]](message, messageLowercase, arguments);
+            commands[messageLowercase.split(" ")[0]](message, arguments);
         } else {
             Logging.log("Unknown command '" + messageLowercase + "'.")
         }
