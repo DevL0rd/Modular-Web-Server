@@ -24,13 +24,13 @@ Modular Web Server requires [Node.js](https://nodejs.org/) v4+ to run.
     node server.js "./config.json"
     ```
 - Set Webroot path in config.json to point to your WebRoot
--   ```sh
-    "webRoot": "./someProjectFolder/Webroot"
-    ```
+    ```sh
+    "webRoot": "./someProjectFolder/Webroot"
+    ```
 - If you are using plugins, remember to set the path to your plugins folder in config.json
     ```sh
-    "pluginsPath": "../someProjectFolder/Plugins"
-    ```
+    "pluginsPath": "../someProjectFolder/Plugins"
+    ```
 - Other optional configuration can be done in the config file. The configuration is pretty straight forward so I'll skip documenting that here.
 
 ## Installing plugins
