@@ -176,10 +176,10 @@ io.on('connection', function (socket) {
     });
 })
 
-if (settings.pluginsPath && settings.pluginsPath != ""){
+if (settings.pluginsPath && settings.pluginsPath != "") {
     Logging.log("Loading plugins...", false, "Server")
     var plugins = [];
-    fs.readdirSync(settings.pluginsPath).forEach(function(file) {
+    fs.readdirSync(settings.pluginsPath).forEach(function (file) {
         if (file.split(".").pop() == "js") {
             plugins[file.split(".").shift()] = require(settings.pluginsPath + "/" + file);
         }
@@ -379,7 +379,7 @@ function sendByteRange(reqPath, request, response, callback) {
                 callback(start, end);
             });
         } else {
-            Logging.log("<GET> '" + reqPath + "' Invalid byte range!", true);
+            Logging.log("<GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true);
             response.writeHead(416);
             response.end();
         }
@@ -418,7 +418,7 @@ server.on('error', function (err) {
 server.on('uncaughtException', function (err) {
     Logging.log("ERROR: " + err, true, "Server");
 });
-if (settings.webRoot && settings.webRoot != ""){
+if (settings.webRoot && settings.webRoot != "") {
     Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "Server");
     server.listen(settings.PORT, settings.IP);
     process.stdin.on('data', function (line) {
