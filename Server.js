@@ -100,10 +100,32 @@ if (fs.existsSync("./redirects.json")) {
     DB.save("./redirects.json", redirects)
 }
 
-var commands = {}
-commands.exit = function () {
-    process.exit()
-}
+var commands = {
+    help: {
+        usage: "help",
+        help: "Displays this command list.",
+        do: function (args, fullMessage) {
+            var isFirstLoop = true;
+            for (command in commands) {
+                if (!isFirstLoop) {
+                    console.log("");
+                } else {
+                    isFirstLoop = false;
+                }
+                console.log(command + ":");
+                console.log("   " + commands[command].usage);
+                console.log("   " + commands[command].help);
+            }
+        }
+    },
+    exit: {
+        usage: "exit",
+        help: "Shuts the server down gracefully.",
+        do: function (args, fullMessage) {
+            process.exit();
+        }
+    }
+};
 var events = {
     "connection": [],
     "disconnect": [],
@@ -422,15 +444,13 @@ if (settings.webRoot && settings.webRoot != "") {
     Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "Server");
     server.listen(settings.PORT, settings.IP);
     process.stdin.on('data', function (line) {
-        var message = line.toString().replace("\r\n", "").replace("\n", "")
-        var messageLowercase = message.toLowerCase();
-        var arguments = messageLowercase.split("");
-        arguments.shift()
+        var fullMessage = line.toString().replace("\r\n", "").replace("\n", "")
+        var args = fullMessage.split(" ");
+        var fullMessage = fullMessage.substr(fullMessage.indexOf(" ") + 1);
+        var command = args.shift().toLowerCase();
         //Commands
-        if (commands[messageLowercase] != null) {
-            commands[messageLowercase](message, arguments);
-        } else if (commands[messageLowercase.split(" ")[0]] != null) {
-            commands[messageLowercase.split(" ")[0]](message, arguments);
+        if (commands[command]) {
+            commands[command].do(args, fullMessage)
         } else {
             Logging.log("Unknown command '" + messageLowercase + "'.")
         }
