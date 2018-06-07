@@ -52,6 +52,11 @@ if (fs.existsSync(configPath)) {
             "X-Content-Type-Options": "nosniff"
         },
         security: {
+            hotlinkProtection: {
+                enabled: false,
+                domains: ["localhost"],
+                allowedExtensions: ["htm", "html"]
+            },
             blockedPaths: [],
             blockedFiles: [],
             blockedFileNames: [],
@@ -277,7 +282,6 @@ function Http_Handler(request, response) {
             }
         }
         Logging.setNamespace('HTTP');
-
         if (requestIsPath) {
             for (i in settings.directoryIndex) {
                 testPath = reqPath + "" + settings.directoryIndex[i]
@@ -297,11 +301,27 @@ function Http_Handler(request, response) {
             return;
         }
         if (isBlocked(reqPath)) {
-            Logging.log("<GET> '" + reqPath + "' ACCESS DENIED!", true);
+            Logging.log("<GET> '" + reqPath + "' ACCESS DENIED! This url is explicitly blocked.", true);
             response.writeHead(403);
             response.end();
             return;
         }
+        var extension = reqPath.split('.').pop().toLowerCase()
+
+        if (request.headers['referer']) {
+            if (settings.security.hotlinkProtection.enabled && !settings.security.hotlinkProtection.allowedExtensions.includes(extension) && !settings.security.hotlinkProtection.domains.includes(extractHostname(request.headers['referer']))) {
+                Logging.log("<GET> '" + reqPath + "' ACCESS DENIED! Referer not authorized.", true);
+                response.writeHead(403);
+                response.end();
+                return;
+            }
+        } else if (!settings.security.hotlinkProtection.allowedExtensions.includes(extension) && settings.security.hotlinkProtection.enabled) {
+            Logging.log("<GET> '" + reqPath + "' ACCESS DENIED! Referer header is missing.", true);
+            response.writeHead(403);
+            response.end();
+            return;
+        }
+
         fs.exists(fullPath, function (exists) {
             if (exists) {
                 if (request.headers['range']) {
@@ -416,7 +436,7 @@ function getMime(path) {
 function isBlocked(reqPath) {
     var filename = reqPath.replace(/^.*[\\\/]/, '')
     var directory = reqPath.substring(0, reqPath.lastIndexOf("/"));
-    if (settings.security.blockedPaths.includes(directory) || settings.security.blockedFiles.includes(reqPath) || settings.security.blockedFileNames.includes(filename) || settings.security.blockedFileExtensions.includes(reqPath.split('.').pop())) {
+    if (settings.security.blockedPaths.includes(directory) || settings.security.blockedFiles.includes(reqPath) || settings.security.blockedFileNames.includes(filename) || settings.security.blockedFileExtensions.includes(reqPath.split('.').pop().toLowerCase())) {
         return true;
     }
     return false;
@@ -434,12 +454,27 @@ function pipeFileToResponse(fileStream, mimeType, response) {
         fileStream.pipe(response);
     }
 }
+
 server.on('error', function (err) {
     Logging.log("ERROR: " + err, true, "Server");
 });
 server.on('uncaughtException', function (err) {
     Logging.log("ERROR: " + err, true, "Server");
 });
+
+function extractHostname(url) {
+    var hostname;
+    if (url.indexOf("://") > -1) {
+        hostname = url.split('/')[2];
+    } else {
+        hostname = url.split('/')[0];
+    }
+    hostname = hostname.split(':')[0];
+    hostname = hostname.split('?')[0];
+    return hostname;
+}
+
+
 if (settings.webRoot && settings.webRoot != "") {
     Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "Server");
     server.listen(settings.PORT, settings.IP);
