@@ -105,6 +105,13 @@ if (fs.existsSync("./redirects.json")) {
     DB.save("./redirects.json", redirects)
 }
 
+if (fs.existsSync("./ipBans.json")) {
+    var ipBans = DB.load("./ipBans.json")
+} else {
+    var ipBans = {};
+    DB.save("./ipBans.json", ipBans)
+}
+
 var commands = {
     help: {
         usage: "help",
@@ -120,6 +127,44 @@ var commands = {
                 console.log(command + ":");
                 console.log("   " + commands[command].usage);
                 console.log("   " + commands[command].help);
+            }
+        }
+    },
+    banip: {
+        usage: "banip <ipAddress> [reason]",
+        help: "Bans an ip address from conecting to server, while optionally providing a reason.",
+        do: function (args, fullMessage) {
+            if (!args.length || args[0].split(".").length != 4) {
+                console.log("Usage: " + this.usage);
+                return
+            }
+            var ip = args[0];
+            var reason = fullMessage.replace(ip + " ", "").replace(ip, "");
+            if (!reason) reason = "No reason provided"
+            if (!ipBans[ip]) {
+                ipBans[ip] = { reason: reason };
+                DB.save("./ipBans.json", ipBans);
+                console.log("IP was added to ban list.");
+            } else {
+                console.log("This ip is already banned for '" + ipBans[ip].reason + "'.")
+            }
+        }
+    },
+    unbanip: {
+        usage: "unbanip <ipAddress>",
+        help: "Unban an ip address.",
+        do: function (args, fullMessage) {
+            if (!args.length || args[0].split(".").length != 4) {
+                console.log("Usage: " + this.usage);
+                return;
+            }
+            var ip = args[0];
+            if (ipBans[ip]) {
+                delete ipBans[ip];
+                DB.save("./ipBans.json", ipBans);
+                console.log("IP was removed from ban list.");
+            } else {
+                console.log("This ip is not banned.");
             }
         }
     },
@@ -163,7 +208,6 @@ server.maxHeadersCount = settings.maxHeadersCount;
 var io = require('socket.io')(server);
 io.connectioncount = 0;
 io.clientcount = 0;
-io.IP_BAN_LIST = [];
 io.generate_key = function () {
     var sha = crypto.createHash('sha256');
     sha.update(Math.random().toString());
@@ -176,9 +220,8 @@ io.on('uncaughtException', function (err) {
     Logging.log("ERROR: " + err, true, "IO");
 });
 io.on('connection', function (socket) {
-    if (socket.request.connection.remoteAddress in io.IP_BAN_LIST) {
-        Logging.log("[" + socket.request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + io.IP_BAN_LIST[socket.request.connection.remoteAddress].reason + ")", true, "IO");
-        Logging.log(cc.fg.white + "[" + cc.fg.cyan + socket.request.connection.remoteAddress + cc.fg.white + "]" + cc.fg.red + " REJECTED! " + "IP address is banned. '" + io.IP_BAN_LIST[socket.request.connection.remoteAddress].reason + "'", true, "IO");
+    if (ipBans[socket.request.connection.remoteAddress]) {
+        Logging.log("[" + socket.request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + ipBans[socket.request.connection.remoteAddress].reason + ")", false, "IO");
         socket.disconnect()
         return;
     }
@@ -223,8 +266,13 @@ if (settings.pluginsPath && settings.pluginsPath != "") {
 
 function Http_Handler(request, response) {
     var startTime = new Date().getTime();
+    if (ipBans[request.connection.remoteAddress]) {
+        Logging.log("[" + request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + ipBans[request.connection.remoteAddress].reason + ")");
+        request.destroy();
+        return;
+    }
     if (request.url.length >= settings.maxUrlLength) {
-        Logging.log("Uri too long!", true);
+        Logging.log("[" + request.connection.remoteAddress + "] Uri too long!", true);
         response.writeHead(414)
         response.end()
         return;
@@ -256,14 +304,12 @@ function Http_Handler(request, response) {
             body += data;
             received += data.length;
             if (received > settings.maxPostSizeMB * 1000000) {
-                Logging.log("<POST> '" + reqPath + "' too large!", true);
+                Logging.log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "' too large!", true);
                 request.destroy();
-                response.writeHead(413);
-                response.end()
             }
         });
         request.on('end', function () {
-            Logging.log("<POST> '" + reqPath + "'");
+            Logging.log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "'");
             Logging.setNamespace('Plugin');
             for (i in events["post"]) {
                 if (events["post"][i](request, response, urlParts, body)) {
@@ -295,13 +341,13 @@ function Http_Handler(request, response) {
 
         var fullPath = settings.webRoot + reqPath
         if (requestIsPath) {
-            Logging.log("<GET> '" + reqPath + "' not found!", true);
+            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true);
             response.writeHead(404);
             response.end();
             return;
         }
         if (isBlocked(reqPath)) {
-            Logging.log("<GET> '" + reqPath + "' ACCESS DENIED! This url is explicitly blocked.", true);
+            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! This url is explicitly blocked.", true);
             response.writeHead(403);
             response.end();
             return;
@@ -310,13 +356,13 @@ function Http_Handler(request, response) {
 
         if (request.headers['referer']) {
             if (settings.security.hotlinkProtection.enabled && !settings.security.hotlinkProtection.allowedExtensions.includes(extension) && !settings.security.hotlinkProtection.domains.includes(extractHostname(request.headers['referer']))) {
-                Logging.log("<GET> '" + reqPath + "' ACCESS DENIED! Referer not authorized.", true);
+                Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! Referer not authorized.", true);
                 response.writeHead(403);
                 response.end();
                 return;
             }
         } else if (!settings.security.hotlinkProtection.allowedExtensions.includes(extension) && settings.security.hotlinkProtection.enabled) {
-            Logging.log("<GET> '" + reqPath + "' ACCESS DENIED! Referer header is missing.", true);
+            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! Referer header is missing.", true);
             response.writeHead(403);
             response.end();
             return;
@@ -327,21 +373,21 @@ function Http_Handler(request, response) {
                 if (request.headers['range']) {
                     sendByteRange(reqPath, request, response, function (start, end) {
                         var executionTime = new Date().getTime() - startTime;
-                        Logging.log("<GET> '" + reqPath + "' byte range " + start + "-" + end + " (" + executionTime + "ms)");
+                        Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " (" + executionTime + "ms)");
                     });
                 } else {
                     sendFile(reqPath, request, response, function (isCached) {
                         var executionTime = new Date().getTime() - startTime;
                         var executionTime = new Date().getTime() - startTime;
                         if (isCached) {
-                            Logging.log("<GET> (cached) '" + reqPath + "' (" + executionTime + "ms)");
+                            Logging.log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "' (" + executionTime + "ms)");
                         } else {
-                            Logging.log("<GET> '" + reqPath + "' (" + executionTime + "ms)");
+                            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' (" + executionTime + "ms)");
                         }
                     });
                 }
             } else {
-                Logging.log("<GET> '" + reqPath + "' not found!", true);
+                Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true);
                 response.writeHead(404);
                 response.end();
                 return;
@@ -351,7 +397,7 @@ function Http_Handler(request, response) {
         response.writeHead(418)
         response.end()
     } else {
-        Logging.log("<UNKOWN METHOD> '" + request.method + "'", true);
+        Logging.log("[" + request.connection.remoteAddress + "] <UNKOWN METHOD> '" + request.method + "'", true);
         response.writeHead(501)
         response.end()
     }
@@ -421,7 +467,7 @@ function sendByteRange(reqPath, request, response, callback) {
                 callback(start, end);
             });
         } else {
-            Logging.log("<GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true);
+            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true);
             response.writeHead(416);
             response.end();
         }
@@ -487,7 +533,7 @@ if (settings.webRoot && settings.webRoot != "") {
         if (commands[command]) {
             commands[command].do(args, fullMessage)
         } else {
-            Logging.log("Unknown command '" + messageLowercase + "'.")
+            Logging.log("Unknown command '" + command + "'.")
         }
     });
 } else {
