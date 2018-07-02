@@ -18,18 +18,14 @@ Modular Web Server requires [Node.js](https://nodejs.org/) v4+ to run.
     ```sh
     node server.js 
     ```
-    You can optionally specify the path to the config file when starting the server.
+    You can optionally specify the path to the project folder when starting the server. By default the web servers root directory will be used.
     
     ```sh
-    node server.js "./config.json"
+    node server.js "../someProjectFolder"
     ```
 - Set Webroot path in config.json to point to your WebRoot
     ```sh
     "webRoot": "./someProjectFolder/Webroot"
-    ```
-- If you are using plugins, remember to set the path to your plugins folder in config.json
-    ```sh
-    "pluginsPath": "../someProjectFolder/Plugins"
     ```
 - Other optional configuration can be done in the config file. The configuration is pretty straight forward so I'll skip documenting that here.
 

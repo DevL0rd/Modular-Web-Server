@@ -12,23 +12,19 @@ var crypto = require('crypto');
 var mime = require('mime-types')
 var DB = require('./Devlord_modules/DB.js');
 var Throttle = require('throttle');
+var mkdirp = require('mkdirp');
 //
 //Include DevLord Libs.
 //
 var Logging = require('./Devlord_modules/Logging.js');
 Logging.setNamespace('HTTP');
-
-
-
 var cc = require('./Devlord_modules/conColors.js');
 var cs = require('./Devlord_modules/conSplash.js');
-var configPath = "./config.json"
+var projectPath = "."
 //get command line args
-if (process.argv[2]) configPath = process.argv[2];
-
-
-if (fs.existsSync(configPath)) {
-    var settings = DB.load(configPath)
+if (process.argv[2]) projectPath = process.argv[2];
+if (fs.existsSync(projectPath + "/config.json")) {
+    var settings = DB.load(projectPath + "/config.json")
 } else {
     var settings = {
         IP: "0.0.0.0",
@@ -38,8 +34,8 @@ if (fs.existsSync(configPath)) {
         maxPostSizeMB: 8,
         maxUrlLength: 2048,
         directoryIndex: ["index.html"],
-        pluginsPath: "",
-        webRoot: "",
+        webRoot: projectPath + "/WebRoot",
+        pluginsPath: projectPath + "/Plugins",
         throttling: {
             videoBitRateKB: 51000,
             audioBitRateKB: 230,
@@ -64,7 +60,7 @@ if (fs.existsSync(configPath)) {
         },
         logging: {
             enabled: true,
-            directory: "./Logs",
+            directory: projectPath + "/Logs",
             consoleLoggingEnabled: false,
             errorLoggingEnabled: true,
             printConsole: true,
@@ -73,9 +69,14 @@ if (fs.existsSync(configPath)) {
             errorNamespacePrintFilter: []
         }
     }
-    DB.save(configPath, settings)
+    DB.save(projectPath + "/config.json", settings)
 }
-
+mkdirp(settings.webRoot, function (err) {
+    if (err) throw err;
+});
+mkdirp(settings.pluginsPath, function (err) {
+    if (err) throw err;
+});
 Logging.setLoggingDir(settings.logging.directory);
 Logging.setLogging(settings.logging.enabled);
 Logging.logConsole(settings.logging.consoleLoggingEnabled);
@@ -85,31 +86,31 @@ Logging.printErrors(settings.logging.printErrors);
 Logging.setConsoleNamespacePrintFilter(settings.logging.consoleNamespacePrintFilter);
 Logging.setErrorNamespacePrintFilter(settings.logging.errorNamespacePrintFilter);
 
-if (fs.existsSync("./routes.json")) {
-    var routes = DB.load("./routes.json");
+if (fs.existsSync(projectPath + "/routes.json")) {
+    var routes = DB.load(projectPath + "/routes.json");
 } else {
     var routes = {
         GET: {
             "/route/": "/"
         }
     }
-    DB.save("./routes.json", routes)
+    DB.save(projectPath + "/routes.json", routes)
 }
 
-if (fs.existsSync("./redirects.json")) {
-    var redirects = DB.load("./redirects.json")
+if (fs.existsSync(projectPath + "/redirects.json")) {
+    var redirects = DB.load(projectPath + "/redirects.json")
 } else {
     var redirects = {
         "/redirect/": "/"
     }
-    DB.save("./redirects.json", redirects)
+    DB.save(projectPath + "/redirects.json", redirects)
 }
 
-if (fs.existsSync("./ipBans.json")) {
-    var ipBans = DB.load("./ipBans.json")
+if (fs.existsSync(projectPath + "/ipBans.json")) {
+    var ipBans = DB.load(projectPath + "/ipBans.json")
 } else {
     var ipBans = {};
-    DB.save("./ipBans.json", ipBans)
+    DB.save(projectPath + "/ipBans.json", ipBans)
 }
 
 var commands = {
@@ -143,7 +144,7 @@ var commands = {
             if (!reason) reason = "No reason provided"
             if (!ipBans[ip]) {
                 ipBans[ip] = { reason: reason };
-                DB.save("./ipBans.json", ipBans);
+                DB.save(projectPath + "/ipBans.json", ipBans);
                 console.log("IP was added to ban list.");
             } else {
                 console.log("This ip is already banned for '" + ipBans[ip].reason + "'.")
@@ -161,7 +162,7 @@ var commands = {
             var ip = args[0];
             if (ipBans[ip]) {
                 delete ipBans[ip];
-                DB.save("./ipBans.json", ipBans);
+                DB.save(projectPath + "/ipBans.json", ipBans);
                 console.log("IP was removed from ban list.");
             } else {
                 console.log("This ip is not banned.");
@@ -261,7 +262,7 @@ if (settings.pluginsPath && settings.pluginsPath != "") {
         Logging.setNamespace('HTTP');
     }
 } else {
-    Logging.log("To use plugins please configure the directory in '" + configPath + "'", false, "Server")
+    Logging.log("To use plugins please configure the directory in 'config.json'", false, "Server")
 }
 
 function Http_Handler(request, response) {
@@ -537,5 +538,5 @@ if (settings.webRoot && settings.webRoot != "") {
         }
     });
 } else {
-    Logging.log("ERROR: Please set webroot in '" + configPath + "'", true, "Server");
+    Logging.log("ERROR: Please set webroot in 'config.json'", true, "Server");
 }
