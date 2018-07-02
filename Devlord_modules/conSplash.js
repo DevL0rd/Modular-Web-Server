@@ -1,6 +1,5 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
-//Last Update: 4/18/2018
 var cc = require('./conColors.js');
 console.log(cc.style.bright + cc.fg.blue)
 console.log(" ____                     ___                    __      ");

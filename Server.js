@@ -1,7 +1,5 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
-//Last Update: 4/19/2018
-//Version: 2.1.1
 
 //Include Libs
 var url = require('url');

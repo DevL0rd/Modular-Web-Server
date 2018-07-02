@@ -1,7 +1,5 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
-//Last Update: 3/21/2018
-//Version: 1.0.0
 var reset = "\x1b[0m";
 
 var style = {

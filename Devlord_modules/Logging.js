@@ -1,7 +1,5 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
-//Last Update: 4/19/2018
-//Version: 1.2.0
 var fs = require('fs');
 var cc = require('./conColors.js');
 var NameSpace = "Devlord Project";
