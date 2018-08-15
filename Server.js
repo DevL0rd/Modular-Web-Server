@@ -372,16 +372,23 @@ function Http_Handler(request, response) {
                 if (request.headers['range']) {
                     sendByteRange(reqPath, request, response, function (start, end) {
                         var executionTime = new Date().getTime() - startTime;
-                        Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " (" + executionTime + "ms)");
+                        Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " requested. (" + executionTime + "ms)");
+                    }, function (start, end) {
+                        var executionTime = new Date().getTime() - startTime;
+                        Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " sent! (" + executionTime + "ms)");
                     });
                 } else {
                     sendFile(reqPath, request, response, function (isCached) {
                         var executionTime = new Date().getTime() - startTime;
-                        var executionTime = new Date().getTime() - startTime;
                         if (isCached) {
                             Logging.log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "' (" + executionTime + "ms)");
                         } else {
-                            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' (" + executionTime + "ms)");
+                            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' requested. (" + executionTime + "ms)");
+                        }
+                    }, function (isCached) {
+                        var executionTime = new Date().getTime() - startTime;
+                        if (!isCached) {
+                            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' sent! (" + executionTime + "ms)");
                         }
                     });
                 }
@@ -419,8 +426,8 @@ function sendFile(reqPath, request, response, callback) {
             response.writeHead(200, header);
             var fileStream = fs.createReadStream(fullPath);
             pipeFileToResponse(fileStream, mimeType, response);
+            callback(false);
             fileStream.on('end', () => {
-                callback(false);
             });
         }
     });
@@ -449,11 +456,13 @@ function sendByteRange(reqPath, request, response, callback) {
         var partialend = parts[1];
         var start = parseInt(partialstart, 10);
         var end = partialend ? parseInt(partialend, 10) : total - 1;
-        var chunksize = (end - start) + 1;
-        if (start >= 0 && end < total) {
+        start = isNaN(start) ? 0 : start
+        var chunksize = (end - start);
+        if (start >= 0 && start <= end && end <= total - 1) {
             var mimeType = getMime(reqPath);
             var header = buildHeader(mimeType, stat, {
                 'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+                'Content-Length': start == end ? 0 : (end - start + 1),
                 'Accept-Ranges': 'bytes'
             });
             response.writeHead(206, header);
@@ -462,16 +471,21 @@ function sendByteRange(reqPath, request, response, callback) {
                 end: end
             });
             pipeFileToResponse(fileStream, mimeType, response);
+
+            callback(start, end);
             fileStream.on('end', () => {
-                callback(start, end);
+
             });
         } else {
             Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true);
-            response.writeHead(416);
+            responseHeaders['Content-Range'] = 'bytes */' + stat.size;
+            var header = buildHeader(mimeType, stat, {
+                'Content-Range': 'bytes */' + stat.size
+            });
+            response.writeHead(416, header);
             response.end();
         }
     });
-
 }
 
 function getMime(path) {
