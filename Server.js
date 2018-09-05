@@ -478,7 +478,6 @@ function sendByteRange(reqPath, request, response, callback) {
             });
         } else {
             Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true);
-            responseHeaders['Content-Range'] = 'bytes */' + stat.size;
             var header = buildHeader(mimeType, stat, {
                 'Content-Range': 'bytes */' + stat.size
             });
