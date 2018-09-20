@@ -30,7 +30,7 @@ Modular Web Server requires [Node.js](https://nodejs.org/) v4+ to run.
 - Other optional configuration can be done in the config file. The configuration is pretty straight forward so I'll skip documenting that here.
 
 ## Installing plugins
-- Drop you plugins .js file into the plugins folder.
+- Drop your plugins .js file into the plugins folder.
 - If the plugin has any dependencies, make sure to install them!
 
 ## Creating plugins
