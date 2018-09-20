@@ -64,14 +64,6 @@ Here comes the fun part!
     }
     exports.init = init;
     ```
-- Accessing the server's settings.json file
-    ```javascript
-    function init(plugins, settings, events, io, log, commands) {
-        console.log("The server is running on port '" + settings.port + "'.");
-        console.log("The webroot is located at '" + settings.webRoot + "'.");
-    }
-    exports.init = init;
-    ```
 - Using the servers namespaces to filter and control logging
     ```javascript
     function init(plugins, settings, events, io, log, commands) {
