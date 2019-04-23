@@ -132,9 +132,6 @@ ipcRenderer.on('getRecents', function (event, recents) {
 ipcRenderer.on('openProject', function (event, data) {
     $("#chooseproject").hide();
     $("#serverTools").show(1000);
-    setTimeout(function () {
-        $('#browser').attr('src', "http://localhost/");
-    }, 2000)
 });
 
 $("#browser-btn").click(function () {
