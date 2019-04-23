@@ -488,7 +488,7 @@ function sendFile(reqPath, request, response, callback) {
     });
 }
 
-function buildHeader(mimeType, stat, otherOptions = {}) {
+function buildHeader(mimeType = "application/octet-stream", stat, otherOptions = {}) {
     var contentLength = stat.size;
     var lastModified = stat.mtime.toUTCString();
     var header = {
