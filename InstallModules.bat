@@ -1,1 +1,2 @@
-npm install --save
+npm install
+pause

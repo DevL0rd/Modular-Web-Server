@@ -1,12 +1,25 @@
 {
-    "dependencies": {
-        "mime-types": "latest",
-        "mkdirp": "latest",
-        "socket.io": "latest",
-        "throttle": "latest"
-    },
-    "author": {
-        "name": "Dustin Harris",
-        "email": "dmhzmxn@gmail.com"
-    }
+  "name": "HackBox",
+  "version": "1.0.0",
+  "description": "A plethora of hack tools.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron --enable-transparent-visuals --no-sandbox --disable-web-security ."
+  },
+  "repository": "https://github.com/delv0rd/modular-web-server",
+  "keywords": [],
+  "author": "Dustin Harris",
+  "license": "",
+  "dependencies": {
+    "electron": "^4.1.4",
+    "bootstrap": "^4.1.3",
+    "jquery": "^3.3.1",
+    "popper.js": "^1.14.4",
+    "mime-types": "latest",
+    "mkdirp": "latest",
+    "socket.io": "latest",
+    "throttle": "latest",
+    "slash": "latest",
+    "ansi_up": "latest"
+  }
 }

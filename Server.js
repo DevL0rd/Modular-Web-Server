@@ -2,276 +2,335 @@
 //GitHub: https://github.com/DevL0rd
 
 //Include Libs
-var url = require('url');
-var os = require('os');
-var fs = require('fs');
-var http = require('http');
-var crypto = require('crypto');
-var mime = require('mime-types')
-var DB = require('./Devlord_modules/DB.js');
-var Throttle = require('throttle');
-var mkdirp = require('mkdirp');
+const url = require('url');
+const os = require('os');
+const fs = require('fs');
+const http = require('http');
+const crypto = require('crypto');
+const mime = require('mime-types')
+const Throttle = require('throttle');
+const mkdirp = require('mkdirp');
+const slash = require('slash');
+const DB = require('./Devlord_modules/DB.js');
+const cc = require('./Devlord_modules/conColors.js');
+var NameSpace = "HTTP";
+
 //
 //Include DevLord Libs.
 //
-var Logging = require('./Devlord_modules/Logging.js');
-Logging.setNamespace('HTTP');
-var cc = require('./Devlord_modules/conColors.js');
-var cs = require('./Devlord_modules/conSplash.js');
-var projectPath = "."
-//get command line args
-if (process.argv[2]) projectPath = process.argv[2];
-if (fs.existsSync(projectPath + "/config.json")) {
-    var settings = DB.load(projectPath + "/config.json")
-} else {
-    var settings = {
-        IP: "0.0.0.0",
-        PORT: 80,
-        timeout: 5000,
-        maxHeadersCount: 20,
-        maxPostSizeMB: 8,
-        maxUrlLength: 2048,
-        directoryIndex: ["index.html"],
-        webRoot: projectPath + "/WebRoot",
-        pluginsPath: projectPath + "/Plugins",
-        throttling: {
-            videoBitRateKB: 51000,
-            audioBitRateKB: 230,
-            applicationDownloadThrottleMB: 15,
-        },
-        defaultHeaders: {
-            "Cache-Control": "max-age=0",
-            "X-Frame-Options": "SAMEORIGIN",
-            "X-XSS-Protection": "1; mode=block",
-            "X-Content-Type-Options": "nosniff"
-        },
-        security: {
-            hotlinkProtection: {
-                enabled: false,
-                domains: ["localhost"],
-                allowedExtensions: ["htm", "html"]
-            },
-            blockedPaths: [],
-            blockedFiles: [],
-            blockedFileNames: [],
-            blockedFileExtensions: []
-        },
-        logging: {
-            enabled: true,
-            directory: projectPath + "/Logs",
-            consoleLoggingEnabled: false,
-            errorLoggingEnabled: true,
-            printConsole: true,
-            printErrors: true,
-            consoleNamespacePrintFilter: ["HTTP"],
-            errorNamespacePrintFilter: []
-        }
-    }
-    DB.save(projectPath + "/config.json", settings)
-}
-mkdirp(settings.webRoot, function (err) {
-    if (err) throw err;
-});
-mkdirp(settings.pluginsPath, function (err) {
-    if (err) throw err;
-});
-Logging.setLoggingDir(settings.logging.directory);
-Logging.setLogging(settings.logging.enabled);
-Logging.logConsole(settings.logging.consoleLoggingEnabled);
-Logging.logErrors(settings.logging.errorLoggingEnabled);
-Logging.printConsole(settings.logging.printConsole);
-Logging.printErrors(settings.logging.printErrors);
-Logging.setConsoleNamespacePrintFilter(settings.logging.consoleNamespacePrintFilter);
-Logging.setErrorNamespacePrintFilter(settings.logging.errorNamespacePrintFilter);
 
-if (fs.existsSync(projectPath + "/routes.json")) {
-    var routes = DB.load(projectPath + "/routes.json");
-} else {
-    var routes = {
-        GET: {
-            "/route/": "/"
+
+function timeStamp() {
+    // Create a date object with the current time
+    var now = new Date();
+
+    // Create an array with the current month, day and time
+    var date = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
+
+    // Create an array with the current hour, minute and second
+    var time = [now.getHours(), now.getMinutes(), now.getSeconds()];
+
+    // Determine AM or PM suffix based on the hour
+    var suffix = (time[0] < 12) ? "AM" : "PM";
+
+    // Convert hour from military time
+    time[0] = (time[0] < 12) ? time[0] : time[0] - 12;
+
+    // If hour is 0, set it to 12
+    time[0] = time[0] || 12;
+
+    // If seconds and minutes are less than 10, add a zero
+    for (var i = 1; i < 3; i++) {
+        if (time[i] < 10) {
+            time[i] = "0" + time[i];
         }
     }
-    DB.save(projectPath + "/routes.json", routes)
+
+    // Return the formatted string
+    return date.join("/") + " " + time.join(":") + " " + suffix;
 }
 
-if (fs.existsSync(projectPath + "/redirects.json")) {
-    var redirects = DB.load(projectPath + "/redirects.json")
-} else {
-    var redirects = {
-        "/redirect/": "/"
-    }
-    DB.save(projectPath + "/redirects.json", redirects)
+function isEven(n) {
+    n = Number(n);
+    return n === 0 || !!(n && !(n % 2));
 }
 
-if (fs.existsSync(projectPath + "/ipBans.json")) {
-    var ipBans = DB.load(projectPath + "/ipBans.json")
-} else {
-    var ipBans = {};
-    DB.save(projectPath + "/ipBans.json", ipBans)
-}
-
-var commands = {
-    help: {
-        usage: "help",
-        help: "Displays this command list.",
-        do: function (args, fullMessage) {
-            var isFirstLoop = true;
-            for (command in commands) {
-                if (!isFirstLoop) {
-                    console.log("");
-                } else {
-                    isFirstLoop = false;
-                }
-                console.log(command + ":");
-                console.log("   " + commands[command].usage);
-                console.log("   " + commands[command].help);
-            }
-        }
-    },
-    banip: {
-        usage: "banip <ipAddress> [reason]",
-        help: "Bans an ip address from conecting to server, while optionally providing a reason.",
-        do: function (args, fullMessage) {
-            if (!args.length || args[0].split(".").length != 4) {
-                console.log("Usage: " + this.usage);
-                return
-            }
-            var ip = args[0];
-            var reason = fullMessage.replace(ip + " ", "").replace(ip, "");
-            if (!reason) reason = "No reason provided"
-            if (!ipBans[ip]) {
-                ipBans[ip] = { reason: reason };
-                DB.save(projectPath + "/ipBans.json", ipBans);
-                console.log("IP was added to ban list.");
-            } else {
-                console.log("This ip is already banned for '" + ipBans[ip].reason + "'.")
-            }
-        }
-    },
-    unbanip: {
-        usage: "unbanip <ipAddress>",
-        help: "Unban an ip address.",
-        do: function (args, fullMessage) {
-            if (!args.length || args[0].split(".").length != 4) {
-                console.log("Usage: " + this.usage);
-                return;
-            }
-            var ip = args[0];
-            if (ipBans[ip]) {
-                delete ipBans[ip];
-                DB.save(projectPath + "/ipBans.json", ipBans);
-                console.log("IP was removed from ban list.");
-            } else {
-                console.log("This ip is not banned.");
-            }
-        }
-    },
-    exit: {
-        usage: "exit",
-        help: "Shuts the server down gracefully.",
-        do: function (args, fullMessage) {
-            process.exit();
-        }
-    }
-};
-var events = {
-    "connection": [],
-    "disconnect": [],
-    "post": [],
-    "get": [],
-    "on": function (event, callback) {
-        if (this[event] != null) {
-            this[event].push(callback)
-        } else {
-            Logging.log("Event '" + event + "' is not found.", true, "Server")
-        }
-    }
+String.prototype.replaceAll = function (search, replacement) {
+    var target = this;
+    return target.split(search).join(replacement);
 };
 
-var server = http.createServer(function (request, response) {
+function formatAndColorString(NameSpaceStr, str, isError) {
+    var formattedPrefixColored = cc.style.bright + cc.fg.white + "[" + cc.fg.blue + timeStamp() + cc.fg.white + "] (" + cc.fg.magenta + NameSpaceStr + cc.fg.white + "): ";
+    var loggedStrColor = cc.fg.white;
+    if (isError) loggedStrColor = cc.fg.red;
+    var cstringColoredQuotes = str.replace(/\'.*\'/, cc.style.underscore + cc.fg.cyan + '$&' + cc.reset + cc.style.bright + loggedStrColor);
+    return formattedPrefixColored + loggedStrColor + cstringColoredQuotes + cc.reset + cc.fg.white;
+}
+
+function formatStringNoColor(str, NameSpaceStr) {
+    var formattedString = "[" + timeStamp() + "] (" + NameSpaceStr + "): " + str;
+    return "\r\n" + formattedString;
+}
+function log(str, isError = false, NameSpaceStr = NameSpace) {
+    NameSpace = NameSpaceStr;
     setTimeout(function () {
-        try {
-            Http_Handler(request, response);
-        } catch (err) {
-            response.writeHead(500)
-            response.end()
-            if (err.message) {
-                Logging.log("'" + request.url + "' " + err.message + ".\n" + err.stack, true);
+
+        var colorStr = formatAndColorString(NameSpaceStr, str, isError);
+        var formattedString = formatStringNoColor(str, NameSpaceStr);
+        str = "" + str;
+        if (isError) {
+            if (settings.logging.printErrors && !settings.logging.errorNamespacePrintFilter.includes(NameSpaceStr)) {
+                console.log(colorStr);
+                for (i in events["log"]) {
+                    events["log"][i](NameSpaceStr, formattedString, colorStr);
+                }
+            }
+        } else {
+            if (settings.logging.printConsole && !settings.logging.consoleNamespacePrintFilter.includes(NameSpaceStr)) {
+                console.log(colorStr);
+                for (i in events["log"]) {
+                    if (events["log"][i](NameSpaceStr, formattedString, colorStr)) {
+                        events["log"][i](NameSpaceStr, formattedString, colorStr);
+                    }
+                }
             }
         }
-    }, 0)
-})
-server.timeout = settings.timeout;
-server.maxHeadersCount = settings.maxHeadersCount;
-var io = require('socket.io')(server);
-io.connectioncount = 0;
-io.clientcount = 0;
-io.generate_key = function () {
-    var sha = crypto.createHash('sha256');
-    sha.update(Math.random().toString());
-    return sha.digest('hex');
-}
-io.on('error', function (err) {
-    Logging.log("ERROR: " + err, true, "IO");
-});
-io.on('uncaughtException', function (err) {
-    Logging.log("ERROR: " + err, true, "IO");
-});
-io.on('connection', function (socket) {
-    if (ipBans[socket.request.connection.remoteAddress]) {
-        Logging.log("[" + socket.request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + ipBans[socket.request.connection.remoteAddress].reason + ")", false, "IO");
-        socket.disconnect()
-        return;
-    }
-    io.connectioncount++;
-    io.clientcount++;
-    Logging.log(cc.fg.white + "[" + cc.fg.cyan + socket.request.connection.remoteAddress + cc.fg.white + "]" + cc.fg.green + " connected!" + cc.fg.white + " " + io.clientcount + " clients connected.", false, "IO");
-    Logging.setNamespace('Plugin');
-    for (i in events["connection"]) {
-        events["connection"][i](socket)
-    }
-    Logging.setNamespace('HTTP');
-    io.emit('connectionCount', io.clientcount)
-    socket.on('disconnect', function (data) {
-        io.clientcount--;
-        Logging.log(cc.fg.white + "[" + cc.fg.cyan + socket.request.connection.remoteAddress + cc.fg.white + "]" + cc.fg.yellow + " disconnected..." + cc.fg.white + " " + io.clientcount + " clients connected.", false, "IO");
-        Logging.setNamespace('Plugin');
-        for (i in events["disconnect"]) {
-            events["disconnect"][i](socket)
-        }
-        Logging.setNamespace('HTTP');
-        io.emit('connectionCount', io.clientcount)
-    });
-})
 
-if (settings.pluginsPath && settings.pluginsPath != "") {
-    Logging.log("Loading plugins...", false, "Server")
-    var plugins = [];
-    fs.readdirSync(settings.pluginsPath).forEach(function (file) {
-        if (file.split(".").pop() == "js") {
-            plugins[file.split(".").shift()] = require(settings.pluginsPath + "/" + file);
+        if (settings.logging.enabled) {
+            var now = new Date();
+            var date = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
+            var TodaysDate = date.join("-");
+            if (settings.logging.consoleLoggingEnabled) {
+                fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+                fs.appendFile(settings.logging.directory + "/" + "C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+            }
+            if (settings.logging.errorLoggingEnabled) {
+                fs.appendFile(settings.logging.directory + "/" + "E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+                fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+            }
+        }
+    }, 0);
+}
+
+var plugins = [];
+var server;
+var io;
+var settings;
+var routes;
+var redirects;
+var ipBans;
+
+function isDirEmpty(dirStr) {
+    fs.readdirSync(dirStr, function (err, files) {
+        if (err) {
+            return false;
+        } else {
+            if (!files.length) {
+                return true;
+            } else {
+                return false;
+            }
         }
     });
-    for (var i in plugins) {
-        Logging.log("Plugin '" + i + "' loaded.", false, "Server")
-        Logging.setNamespace('Plugin');
-        plugins[i].init(plugins, settings, events, io, Logging.log, commands);
-        Logging.setNamespace('HTTP');
+}
+function loadProjectFile(projectPath) {
+    if (fs.existsSync(projectPath + "/MWSProject.json")) {
+        settings = DB.load(projectPath + "/MWSProject.json")
+    } else {
+        settings = {
+            Name: "New Webserver App",
+            Author: "",
+            IP: "0.0.0.0",
+            PORT: 80,
+            timeout: 5000,
+            maxHeadersCount: 20,
+            maxPostSizeMB: 8,
+            maxUrlLength: 2048,
+            directoryIndex: ["index.html"],
+            webRoot: projectPath + "/WebRoot",
+            pluginsPath: projectPath + "/Plugins",
+            throttling: {
+                videoBitRateKB: 51000,
+                audioBitRateKB: 230,
+                applicationDownloadThrottleMB: 15,
+            },
+            defaultHeaders: {
+                "Cache-Control": "max-age=0",
+                "X-Frame-Options": "SAMEORIGIN",
+                "X-XSS-Protection": "1; mode=block",
+                "X-Content-Type-Options": "nosniff"
+            },
+            security: {
+                hotlinkProtection: {
+                    enabled: false,
+                    domains: ["localhost"],
+                    allowedExtensions: ["htm", "html"]
+                },
+                blockedPaths: [],
+                blockedFiles: [],
+                blockedFileNames: [],
+                blockedFileExtensions: []
+            },
+            logging: {
+                enabled: true,
+                directory: projectPath + "/Logs",
+                consoleLoggingEnabled: false,
+                errorLoggingEnabled: true,
+                printConsole: true,
+                printErrors: true,
+                consoleNamespacePrintFilter: ["HTTP"],
+                errorNamespacePrintFilter: []
+            }
+        }
+        DB.save(projectPath + "/MWSProject.json", settings)
     }
-} else {
-    Logging.log("To use plugins please configure the directory in 'config.json'", false, "Server")
+    mkdirp(settings.webRoot, function (err) {
+        if (err) throw err;
+    });
+    mkdirp(settings.pluginsPath, function (err) {
+        if (err) throw err;
+    });
+    mkdirp(settings.logging.directory, function (err) {
+        if (err) throw err;
+    });
+    if (fs.existsSync(projectPath + "/routes.json")) {
+        routes = DB.load(projectPath + "/routes.json");
+    } else {
+        routes = {
+            GET: {
+                "/route/": "/"
+            }
+        }
+        DB.save(projectPath + "/routes.json", routes)
+    }
+
+    if (fs.existsSync(projectPath + "/redirects.json")) {
+        redirects = DB.load(projectPath + "/redirects.json")
+    } else {
+        redirects = {
+            "/redirect/": "/"
+        }
+        DB.save(projectPath + "/redirects.json", redirects)
+    }
+
+    if (fs.existsSync(projectPath + "/ipBans.json")) {
+        ipBans = DB.load(projectPath + "/ipBans.json")
+    } else {
+        ipBans = {};
+        DB.save(projectPath + "/ipBans.json", ipBans)
+    }
+    //re-export settings
+    exports.settings = settings;
+}
+
+//get command line args
+function init(projectPath = ".") {
+    projectPath = slash(projectPath);
+    if (!isDirEmpty(projectPath) && !fs.existsSync(projectPath + "/MWSProject.json")) {
+        return false;
+    }
+    loadProjectFile(projectPath);
+    settings.projectPath = projectPath; //read only check of path
+    server = http.createServer(function (request, response) {
+        setTimeout(function () {
+            try {
+                Http_Handler(request, response);
+            } catch (err) {
+                response.writeHead(500)
+                response.end()
+                if (err.message) {
+                    log("'" + request.url + "' " + err.message + ".\n" + err.stack, true, "HTTP");
+                }
+            }
+        }, 0)
+    })
+
+    server.timeout = settings.timeout;
+    server.maxHeadersCount = settings.maxHeadersCount;
+    var io = require('socket.io')(server);
+    io.connectioncount = 0;
+    io.clientcount = 0;
+    io.generate_key = function () {
+        var sha = crypto.createHash('sha256');
+        sha.update(Math.random().toString());
+        return sha.digest('hex');
+    }
+    io.on('error', function (err) {
+        log("ERROR: " + err, true, "IO");
+    });
+    io.on('uncaughtException', function (err) {
+        log("ERROR: " + err, true, "IO");
+    });
+    io.on('connection', function (socket) {
+        if (ipBans[socket.request.connection.remoteAddress]) {
+            log("[" + socket.request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + ipBans[socket.request.connection.remoteAddress].reason + ")", false, "IO");
+            socket.disconnect()
+            return;
+        }
+        io.connectioncount++;
+        io.clientcount++;
+        log(cc.fg.white + "[" + cc.fg.cyan + socket.request.connection.remoteAddress + cc.fg.white + "]" + cc.fg.green + " connected!" + cc.fg.white + " " + io.clientcount + " clients connected.", false, "IO");
+        for (i in events["connection"]) {
+            events["connection"][i](socket)
+        }
+        io.emit('connectionCount', io.clientcount)
+        socket.on('disconnect', function (data) {
+            io.clientcount--;
+            log(cc.fg.white + "[" + cc.fg.cyan + socket.request.connection.remoteAddress + cc.fg.white + "]" + cc.fg.yellow + " disconnected..." + cc.fg.white + " " + io.clientcount + " clients connected.", false, "IO");
+            for (i in events["disconnect"]) {
+                events["disconnect"][i](socket)
+            }
+            io.emit('connectionCount', io.clientcount)
+        });
+    })
+
+    server.on('error', function (err) {
+        log(err, true, "Server");
+    });
+    server.on('uncaughtException', function (err) {
+        log(err, true, "Server");
+    });
+
+    if (settings.pluginsPath && settings.pluginsPath != "") {
+        log("Loading plugins...", false, "Server")
+        plugins = [];
+        fs.readdirSync(settings.pluginsPath).forEach(function (file) {
+            if (file.split(".").pop() == "js") {
+                plugins[file.split(".").shift()] = require(settings.pluginsPath + "/" + file);
+            }
+        });
+        for (var i in plugins) {
+            log("Plugin '" + i + "' loaded.", false, "Server")
+            plugins[i].init(plugins, settings, events, io, log, commands);
+        }
+    } else {
+        log("To use plugins please configure the directory in 'MWSProject.json'", false, "Server")
+    }
+    if (settings.webRoot && settings.webRoot != "") {
+        log("Starting HTTP server at '" + settings.IP + ":" + settings.PORT + "'...", false, "HTTP");
+        server.listen(settings.PORT, settings.IP);
+    } else {
+        log("ERROR: Please set webroot in 'MWSProject.json'", true, "Server");
+        return false;
+    }
+    return true;
+}
+
+function stopServer() {
+    server.close();
+    log("Server Stopped!", false, "Server");
 }
 
 function Http_Handler(request, response) {
     var startTime = new Date().getTime();
     if (ipBans[request.connection.remoteAddress]) {
-        Logging.log("[" + request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + ipBans[request.connection.remoteAddress].reason + ")");
+        log("[" + request.connection.remoteAddress + "] Rejected!" + " IP address is banned. (" + ipBans[request.connection.remoteAddress].reason + ")", "HTTP");
         request.destroy();
         return;
     }
     if (request.url.length >= settings.maxUrlLength) {
-        Logging.log("[" + request.connection.remoteAddress + "] Uri too long!", true);
+        log("[" + request.connection.remoteAddress + "] Uri too long!", true, "HTTP");
         response.writeHead(414)
         response.end()
         return;
@@ -286,6 +345,7 @@ function Http_Handler(request, response) {
         response.end()
         return;
     }
+
     if (routes[request.method] && routes[request.method][reqPath]) {
         reqPath = routes[request.method][reqPath]
     }
@@ -303,30 +363,24 @@ function Http_Handler(request, response) {
             body += data;
             received += data.length;
             if (received > settings.maxPostSizeMB * 1000000) {
-                Logging.log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "' too large!", true);
+                log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "' too large!", true, "HTTP");
                 request.destroy();
             }
         });
         request.on('end', function () {
-            Logging.log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "'");
-            Logging.setNamespace('Plugin');
+            log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "'", false, "HTTP");
             for (i in events["post"]) {
                 if (events["post"][i](request, response, urlParts, body)) {
-                    Logging.setNamespace('HTTP');
                     break;
                 }
             }
-            Logging.setNamespace('HTTP');
         });
     } else if (request.method == 'GET') {
-        Logging.setNamespace('Plugin');
         for (i in events["get"]) {
             if (events["get"][i](request, response, urlParts)) {
-                Logging.setNamespace('HTTP');
                 return;
             }
         }
-        Logging.setNamespace('HTTP');
         if (requestIsPath) {
             for (i in settings.directoryIndex) {
                 testPath = reqPath + "" + settings.directoryIndex[i]
@@ -338,15 +392,16 @@ function Http_Handler(request, response) {
             }
         }
 
+
         var fullPath = settings.webRoot + reqPath
         if (requestIsPath) {
-            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true);
+            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true, "HTTP");
             response.writeHead(404);
             response.end();
             return;
         }
         if (isBlocked(reqPath)) {
-            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! This url is explicitly blocked.", true);
+            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! This url is explicitly blocked.", true, "HTTP");
             response.writeHead(403);
             response.end();
             return;
@@ -355,13 +410,13 @@ function Http_Handler(request, response) {
 
         if (request.headers['referer']) {
             if (settings.security.hotlinkProtection.enabled && !settings.security.hotlinkProtection.allowedExtensions.includes(extension) && !settings.security.hotlinkProtection.domains.includes(extractHostname(request.headers['referer']))) {
-                Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! Referer not authorized.", true);
+                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! Referer not authorized.", true, "HTTP");
                 response.writeHead(403);
                 response.end();
                 return;
             }
         } else if (!settings.security.hotlinkProtection.allowedExtensions.includes(extension) && settings.security.hotlinkProtection.enabled) {
-            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! Referer header is missing.", true);
+            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' ACCESS DENIED! Referer header is missing.", true, "HTTP");
             response.writeHead(403);
             response.end();
             return;
@@ -372,28 +427,28 @@ function Http_Handler(request, response) {
                 if (request.headers['range']) {
                     sendByteRange(reqPath, request, response, function (start, end) {
                         var executionTime = new Date().getTime() - startTime;
-                        Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " requested. (" + executionTime + "ms)");
+                        log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " requested. (" + executionTime + "ms)", false, "HTTP");
                     }, function (start, end) {
                         var executionTime = new Date().getTime() - startTime;
-                        Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " sent! (" + executionTime + "ms)");
+                        log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " sent! (" + executionTime + "ms)", false, "HTTP");
                     });
                 } else {
                     sendFile(reqPath, request, response, function (isCached) {
                         var executionTime = new Date().getTime() - startTime;
                         if (isCached) {
-                            Logging.log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "' (" + executionTime + "ms)");
+                            log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "' (" + executionTime + "ms)", false, "HTTP");
                         } else {
-                            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' requested. (" + executionTime + "ms)");
+                            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' requested. (" + executionTime + "ms)", false, "HTTP");
                         }
                     }, function (isCached) {
                         var executionTime = new Date().getTime() - startTime;
                         if (!isCached) {
-                            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' sent! (" + executionTime + "ms)");
+                            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' sent! (" + executionTime + "ms)", false, "HTTP");
                         }
                     });
                 }
             } else {
-                Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true);
+                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true, "HTTP");
                 response.writeHead(404);
                 response.end();
                 return;
@@ -403,7 +458,7 @@ function Http_Handler(request, response) {
         response.writeHead(418)
         response.end()
     } else {
-        Logging.log("[" + request.connection.remoteAddress + "] <UNKOWN METHOD> '" + request.method + "'", true);
+        log("[" + request.connection.remoteAddress + "] <UNKOWN METHOD> '" + request.method + "'", true, "HTTP");
         response.writeHead(501)
         response.end()
     }
@@ -477,7 +532,7 @@ function sendByteRange(reqPath, request, response, callback) {
 
             });
         } else {
-            Logging.log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true);
+            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true, "HTTP");
             var header = buildHeader(mimeType, stat, {
                 'Content-Range': 'bytes */' + stat.size
             });
@@ -513,41 +568,105 @@ function pipeFileToResponse(fileStream, mimeType, response) {
     }
 }
 
-server.on('error', function (err) {
-    Logging.log("ERROR: " + err, true, "Server");
-});
-server.on('uncaughtException', function (err) {
-    Logging.log("ERROR: " + err, true, "Server");
-});
-
-function extractHostname(url) {
-    var hostname;
-    if (url.indexOf("://") > -1) {
-        hostname = url.split('/')[2];
+process.stdin.on('data', function (line) {
+    var fullMessage = line.toString().replace("\r\n", "").replace("\n", "")
+    var args = fullMessage.split(" ");
+    var fullMessage = fullMessage.substr(fullMessage.indexOf(" ") + 1);
+    var command = args.shift().toLowerCase();
+    //Commands
+    if (commands[command]) {
+        commands[command].do(args, fullMessage)
     } else {
-        hostname = url.split('/')[0];
+        log("Unknown command '" + command + "'.", true, "CONSOLE")
     }
-    hostname = hostname.split(':')[0];
-    hostname = hostname.split('?')[0];
-    return hostname;
-}
+});
 
 
-if (settings.webRoot && settings.webRoot != "") {
-    Logging.log("Starting server at '" + settings.IP + ":" + settings.PORT + "'...", false, "Server");
-    server.listen(settings.PORT, settings.IP);
-    process.stdin.on('data', function (line) {
-        var fullMessage = line.toString().replace("\r\n", "").replace("\n", "")
-        var args = fullMessage.split(" ");
-        var fullMessage = fullMessage.substr(fullMessage.indexOf(" ") + 1);
-        var command = args.shift().toLowerCase();
-        //Commands
-        if (commands[command]) {
-            commands[command].do(args, fullMessage)
-        } else {
-            Logging.log("Unknown command '" + command + "'.")
+var commands = {
+    help: {
+        usage: "help",
+        help: "Displays this command list.",
+        do: function (args, fullMessage) {
+            var isFirstLoop = true;
+            for (command in commands) {
+                if (!isFirstLoop) {
+                    console.log("");
+                } else {
+                    isFirstLoop = false;
+                }
+                console.log(command + ":");
+                console.log("   " + commands[command].usage);
+                console.log("   " + commands[command].help);
+            }
         }
-    });
-} else {
-    Logging.log("ERROR: Please set webroot in 'config.json'", true, "Server");
-}
+    },
+    banip: {
+        usage: "banip <ipAddress> [reason]",
+        help: "Bans an ip address from conecting to server, while optionally providing a reason.",
+        do: function (args, fullMessage) {
+            if (!args.length || args[0].split(".").length != 4) {
+                console.log("Usage: " + this.usage);
+                return
+            }
+            var ip = args[0];
+            var reason = fullMessage.replace(ip + " ", "").replace(ip, "");
+            if (!reason) reason = "No reason provided"
+            if (!ipBans[ip]) {
+                ipBans[ip] = { reason: reason };
+                DB.save(projectPath + "/ipBans.json", ipBans);
+                console.log("IP was added to ban list.");
+            } else {
+                console.log("This ip is already banned for '" + ipBans[ip].reason + "'.")
+            }
+        }
+    },
+    unbanip: {
+        usage: "unbanip <ipAddress>",
+        help: "Unban an ip address.",
+        do: function (args, fullMessage) {
+            if (!args.length || args[0].split(".").length != 4) {
+                console.log("Usage: " + this.usage);
+                return;
+            }
+            var ip = args[0];
+            if (ipBans[ip]) {
+                delete ipBans[ip];
+                DB.save(projectPath + "/ipBans.json", ipBans);
+                console.log("IP was removed from ban list.");
+            } else {
+                console.log("This ip is not banned.");
+            }
+        }
+    },
+    exit: {
+        usage: "exit",
+        help: "Shuts the server down gracefully.",
+        do: function (args, fullMessage) {
+            process.exit();
+        }
+    }
+};
+var events = {
+    "connection": [],
+    "disconnect": [],
+    "post": [],
+    "get": [],
+    "log": [],
+    "on": function (event, callback) {
+        if (this[event] != null) {
+            this[event].push(callback)
+        } else {
+            log("Event '" + event + "' is not found.", true, "Server")
+        }
+    }
+};
+
+exports.init = init;
+exports.stopServer = stopServer;
+exports.plugins = plugins;
+exports.settings = settings;
+exports.events = events;
+exports.server = server;
+exports.io = io;
+exports.log = log;
+exports.commands = commands;
