@@ -185,6 +185,8 @@ body {
     overflow-y:auto;
     font-size: 10px;
     padding-left: 6px;
+    border-top: solid 4px;
+    border-top-color: rgba(59, 59, 59, 0.7);
 }
 #consoleInput{
     position: absolute;
