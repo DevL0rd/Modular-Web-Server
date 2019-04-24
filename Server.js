@@ -288,6 +288,7 @@ function init(projectPath = ".") {
     server.on('error', function (err) {
         log(err, true, "Server");
     });
+
     server.on('uncaughtException', function (err) {
         log(err, true, "Server");
     });

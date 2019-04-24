@@ -52,8 +52,38 @@
       </div>
       <iframe id="browser" src="http://localhost/" sandbox="allow-same-origin allow-scripts"
         class="customScroll toolBoxApp"></iframe>
-      <div id="stats" class="toolBoxApp" style="display: none;">
+      <div id="stats" class="toolBoxApp customScroll" style="display: none;">
 
+        <div class="row" style="width: 100%; margin-top: 20px;">
+          <div class="col-md-6 chartCol">
+            <div class="chartpanel">
+              <h5 class="chartTitle">RAM</h5>
+              <div style="width: 100%; height: 150px;">
+                <canvas id="ramChart"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="col-md-6 chartCol">
+            <div class="chartpanel">
+              <h5 class="chartTitle">CPU</h5>
+              <div style="width: 100%; height: 150px;">
+                <canvas id="cpuChart"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
+        <!-- TODO -->
+        <!-- <div class="row" style="width: 100%; margin-top: 20px;">
+          <div class="col-sm-4 recentProjCol">
+            <canvas id="cpuPie"></canvas>
+          </div>
+          <div class="col-sm-4 recentProjCol">
+            <canvas id="ramPie"></canvas>
+          </div>
+          <div class="col-sm-4 recentProjCol">
+            <canvas id="netChart"></canvas>
+          </div>
+        </div> -->
       </div>
       <div id="plugins" class="toolBoxApp" style="display: none;">
 
@@ -76,17 +106,17 @@
       </h1>
     </div>
   </div>
+  <script src="js/fontawesome-all.min.js"></script>
+  <script src="js/Chart.min.js"></script>
   <script>
     // You can also require other files to run in this process
     let $ = require('jquery');
     require('popper.js');
     require('bootstrap');
-    require('./js/client.js');
     require('./js/animations.js');
-
+    require('./js/client.js');
   </script>
-  <script src="js/charts/loader.js"></script>
-  <script src="js/fontawesome-all.min.js"></script>
+  <script src="js/stats.js"></script>
 </body>
 
 </html>

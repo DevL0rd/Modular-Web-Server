@@ -9,8 +9,8 @@ let mainWindow
 function createWindow() {
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 400,
-    height: 600,
+    width: 800,
+    height: 500,
     'min-height': 200,
     'min-width': 400,
     webPreferences: {
@@ -107,5 +107,6 @@ ipcMain.on("openProject", function (event, project) {
     addRecent({ name: mws.settings.Name, author: mws.settings.Author, path: mws.settings.projectPath });
   } else {
     event.sender.send("openProjectFail");
+    //todo make ui to check
   };
 });

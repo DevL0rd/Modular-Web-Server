@@ -151,3 +151,5 @@ $("#settings-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#settings").fadeIn(1000);
 });
+
+//
