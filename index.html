@@ -54,7 +54,7 @@
         class="customScroll toolBoxApp"></iframe>
       <div id="stats" class="toolBoxApp customScroll" style="display: none;">
 
-        <div class="row" style="width: 100%; margin-top: 20px;">
+        <div class="row" style="width: 100%;">
           <div class="col-md-6 chartCol">
             <div class="chartpanel">
               <h5 class="chartTitle">RAM</h5>
@@ -72,18 +72,40 @@
             </div>
           </div>
         </div>
-        <!-- TODO -->
-        <!-- <div class="row" style="width: 100%; margin-top: 20px;">
-          <div class="col-sm-4 recentProjCol">
-            <canvas id="cpuPie"></canvas>
+        <div class="row" style="width: 100%;">
+          <div class="col-sm-3 chartCol">
+            <div class="chartpanel">
+              <h5 class="chartTitle">CPU</h5>
+              <div style="width: 100%; height: 150px;">
+                <canvas id="cpuPie"></canvas>
+              </div>
+            </div>
           </div>
-          <div class="col-sm-4 recentProjCol">
-            <canvas id="ramPie"></canvas>
+          <div class="col-sm-3 chartCol">
+            <div class="chartpanel">
+              <h5 class="chartTitle">RAM</h5>
+              <div style="width: 100%; height: 150px;">
+                <canvas id="ramPie"></canvas>
+              </div>
+            </div>
           </div>
-          <div class="col-sm-4 recentProjCol">
-            <canvas id="netChart"></canvas>
+          <div class="col-sm-3 chartCol">
+            <div class="chartpanel">
+              <h5 class="chartTitle">Disk</h5>
+              <div style="width: 100%; height: 150px;">
+                <canvas id="diskPie"></canvas>
+              </div>
+            </div>
           </div>
-        </div> -->
+          <div class="col-sm-3 chartCol">
+            <div class="chartpanel">
+              <h5 class="chartTitle">Network</h5>
+              <div style="width: 100%; height: 150px;">
+                <canvas id="netPie"></canvas>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="plugins" class="toolBoxApp" style="display: none;">
 
