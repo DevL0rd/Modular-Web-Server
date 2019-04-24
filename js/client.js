@@ -41,15 +41,11 @@ if (!Array.prototype.includes) {
 document.getElementById("min-btn").addEventListener("click", function (e) {
     window.minimize();
 });
-var wSize
 document.getElementById("max-btn").addEventListener("click", function (e) {
     if (!window.isMaximized()) {
-        wSize = window.getSize();
         window.maximize();
     } else {
         window.unmaximize();
-        window.setSize(wSize.width, wSize.height);
-        window.center()
     }
 });
 
@@ -62,7 +58,6 @@ document.getElementById("dev-btn").addEventListener("click", function (e) {
 });
 
 document.getElementById("rld-btn").addEventListener("click", function (e) {
-    stopServer()
     location.reload();
 });
 
@@ -97,14 +92,20 @@ function consoleCommand(command) {
 
 function startServer(path) {
     ipcRenderer.send('openProject', path);
-
 }
 
-function stopServer() {
-    ipcRenderer.send('stopServer');
-    $("#chooseproject").show(1000);
-    $("#serverTools").hide();
-}
+ipcRenderer.send('getIsRunning');
+ipcRenderer.on('getIsRunning', function (event, isRunning) {
+    if (isRunning) {
+        $("#chooseproject").hide();
+        $("#serverTools").show(1000);
+    }
+})
+// function stopServer() {
+//     ipcRenderer.send('stopServer');
+//     $("#chooseproject").show(1000);
+//     $("#serverTools").hide();
+// }
 
 ipcRenderer.send('getRecents');
 ipcRenderer.on('getRecents', function (event, recents) {
@@ -151,5 +152,11 @@ $("#settings-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#settings").fadeIn(1000);
 });
-
+$('#consoleInput').keypress(function (e) {
+    if (e.which == 13) {
+        ipcRenderer.send('consoleCommand', $('#consoleInput').val());
+        $('#consoleInput').val("");
+        return false;    //<---- Add this line
+    }
+});
 //

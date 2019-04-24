@@ -3,6 +3,11 @@
 html {
     background: transparent;
     height: 100%;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
+    overflow: hidden;
 }
 
 body {
@@ -10,12 +15,14 @@ body {
     height: 100%;
     padding: 0px;
     margin: 0px;
-    border-bottom-left-radius: 6px;
-    border-bottom-right-radius: 6px;
+    border-top-left-radius: 5px;
+    border-top-right-radius: 5px;
+    border-bottom-left-radius: 8px;
+    border-bottom-right-radius: 8px;
     overflow: hidden;
 }
 #content {
-    background: linear-gradient(to bottom, rgba(63,63,63,0.8) 0%,rgba(51,51,51,0.8) 67%,rgba(51,51,51,0.8) 100%);
+    background: linear-gradient(to bottom, rgba(30,30,30,0.9) 0%,rgba(51,51,51,0.8) 67%,rgba(51,51,51,0.8) 100%);
     height: calc(100% - 57px);
     overflow: auto;
     width: 100%;
@@ -28,7 +35,7 @@ body {
     background-color: rgba(255, 0, 0, 0.8);
     padding: 0px;
     margin: 0px; 
-    box-shadow: 0px 4px 14px 0px rgba(0,0,0,0.7);
+    box-shadow: 0px 4px 14px 0px rgba(0,0,0,0.9);
 }
 
 #title {
@@ -103,13 +110,6 @@ body {
     display: none;
 }
 
-.navbar-dark {
-    /* -webkit-box-shadow: 0px 2px 15px 0px rgba(0, 0, 0, 0.75);
-    -moz-box-shadow: 0px 2px 15px 0px rgba(0, 0, 0, 0.75);
-    box-shadow: 0px 2px 15px 0px rgba(0, 0, 0, 0.75); */
-    background: rgba(0, 0, 0, 0.7);
-}
-
 #pageLoadingCover {
     position: absolute;
     top: 0px;
@@ -177,14 +177,29 @@ body {
 }
 #consoleContainer {
     position: absolute;
-    bottom: 25px;
+    bottom: 50px;
     left: 50px;
-    height: 30%;
+    height: calc(30% - 25px);
     width: calc(100% - 50px);
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.4);
     overflow-y:auto;
     font-size: 10px;
     padding-left: 6px;
+}
+#consoleInput{
+    position: absolute;
+    bottom: 25px;
+    left: 50px;
+    height: 25px;
+    width: calc(100% - 50px);
+    background: rgba(0, 0, 0, 0.6);
+    font-size: 10px;
+    padding-left: 6px;
+    border: none;
+    color: rgb(185, 185, 185);
+}
+#consoleInput:focus {
+    outline: none;
 }
 .recentProjCol {
     padding: 12px;

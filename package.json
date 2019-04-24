@@ -20,6 +20,7 @@
     "socket.io": "latest",
     "throttle": "latest",
     "slash": "latest",
-    "ansi_up": "latest"
+    "ansi_up": "latest",
+    "electron-window-state": "latest"
   }
 }

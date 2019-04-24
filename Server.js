@@ -588,16 +588,10 @@ var commands = {
         usage: "help",
         help: "Displays this command list.",
         do: function (args, fullMessage) {
-            var isFirstLoop = true;
             for (command in commands) {
-                if (!isFirstLoop) {
-                    console.log("");
-                } else {
-                    isFirstLoop = false;
-                }
-                console.log(command + ":");
-                console.log("   " + commands[command].usage);
-                console.log("   " + commands[command].help);
+                log(command + ":", false, "CONSOLE")
+                log("   " + commands[command].usage, false, "CONSOLE")
+                log("   " + commands[command].help, false, "CONSOLE")
             }
         }
     },
@@ -606,7 +600,7 @@ var commands = {
         help: "Bans an ip address from conecting to server, while optionally providing a reason.",
         do: function (args, fullMessage) {
             if (!args.length || args[0].split(".").length != 4) {
-                console.log("Usage: " + this.usage);
+                log("Usage: " + this.usage, true, "CONSOLE")
                 return
             }
             var ip = args[0];
@@ -615,15 +609,15 @@ var commands = {
             if (!ipBans[ip]) {
                 ipBans[ip] = { reason: reason };
                 DB.save(projectPath + "/ipBans.json", ipBans);
-                console.log("IP was added to ban list.");
+                log("IP was added to ban list.", false, "CONSOLE");
             } else {
-                console.log("This ip is already banned for '" + ipBans[ip].reason + "'.")
+                log("This ip is already banned for '" + ipBans[ip].reason + "'.", true, "CONSOLE");
             }
         }
     },
     unbanip: {
         usage: "unbanip <ipAddress>",
-        help: "Unban an ip address.",
+        help: "Unban an IP address.",
         do: function (args, fullMessage) {
             if (!args.length || args[0].split(".").length != 4) {
                 console.log("Usage: " + this.usage);
@@ -633,9 +627,9 @@ var commands = {
             if (ipBans[ip]) {
                 delete ipBans[ip];
                 DB.save(projectPath + "/ipBans.json", ipBans);
-                console.log("IP was removed from ban list.");
+                log("IP was removed from ban list.", false, "CONSOLE");
             } else {
-                console.log("This ip is not banned.");
+                log("This IP is not banned.", true, "CONSOLE");
             }
         }
     },

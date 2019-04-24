@@ -1,24 +1,35 @@
 
 const DB = require('./Devlord_modules/DB.js');
+const windowStateKeeper = require('electron-window-state');
 const fs = require('fs');
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, ipcMain } = require('electron')
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
+
 function createWindow() {
+  // Load the previous state with fallback to defaults
+  let mainWindowState = windowStateKeeper({
+    defaultWidth: 720,
+    defaultHeight: 500
+  });
   // Create the browser window.
   mainWindow = new BrowserWindow({
-    width: 720,
-    height: 500,
+    x: mainWindowState.x,
+    y: mainWindowState.y,
+    width: mainWindowState.width,
+    height: mainWindowState.height,
     minWidth: 720,
     minHeight: 500,
     webPreferences: {
       nodeIntegration: true
     },
     transparent: true,
+    resizable: true,
     frame: false
   })
+  mainWindowState.manage(mainWindow);
   mainWindow.setMenu(null);
   // and load the index.html of the app.
   mainWindow.loadFile('index.html');
@@ -63,15 +74,17 @@ var AU = require('ansi_up');
 var ansi_up = new AU.default;
 mws.events.on("log", function (nameSpace, text, coloredText) {
   if (htmlLoggingSender) {
-    htmlLoggingSender.send('log', ansi_up.ansi_to_html(coloredText) + "<br>");
+    htmlLoggingSender.send('log', ansi_up.ansi_to_html(coloredText.replace("  ", "\xa0")) + "<br>");
   }
 });
 
-ipcMain.on('consoleCommand', (event, command) => {
+ipcMain.on('consoleCommand', (event, fullMessage) => {
+  var args = fullMessage.split(" ");
+  var command = args.shift().toLowerCase();
   if (mws.commands[command]) {
     mws.commands[command].do(args, fullMessage)
   } else {
-    log("Unknown command '" + command + "'.", true, "CONSOLE")
+    mws.log("Unknown command '" + command + "'.", true, "CONSOLE")
   }
 })
 
@@ -100,9 +113,14 @@ function addRecent(projectInformation) {
 ipcMain.on("getRecents", function (event, data) {
   event.sender.send("getRecents", recents);
 });
+ipcMain.on("getIsRunning", function (event, data) {
+  event.sender.send("getIsRunning", isRunning);
+});
 
+var isRunning = false;
 ipcMain.on("openProject", function (event, project) {
   if (mws.init(project)) {
+    isRunning = true;
     event.sender.send("openProject");
     addRecent({ name: mws.settings.Name, author: mws.settings.Author, path: mws.settings.projectPath });
   } else {
