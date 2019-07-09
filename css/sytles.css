@@ -270,3 +270,40 @@ body {
 .chartCol {
     padding: 0px;
 }
+
+#pluginList{
+    float: left;
+    padding: 8px;
+    background: rgba(56, 56, 56, 0.6);
+    width: 20%;
+    height: 100%;
+}
+.pluginTab{
+    padding: 8px;
+    border-radius: 8px;
+    background: rgba(39, 39, 39, 0.8);
+    color: white;
+    margin-bottom: 8px;
+}
+
+.pluginTab:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    transition: 0.3s;
+}
+.pluginTabBtn {
+    padding: 2px;
+    border-radius: 8px;
+    background: rgba(39, 39, 39, 0.8);
+}
+.pluginName{
+    color: white;
+}
+
+#pluginSettingsIframe{
+    float: left;
+    height: 100%;
+    width: calc(80%);
+    background: transparent;
+    overflow: auto;
+    border: none;
+}

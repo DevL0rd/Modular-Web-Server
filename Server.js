@@ -114,6 +114,7 @@ function log(str, isError = false, NameSpaceStr = NameSpace) {
 }
 
 var plugins = {};
+var pluginInfo = {}
 var server;
 var io;
 var settings;
@@ -305,6 +306,8 @@ function init(projectPath = ".") {
                 var folder = fileInfo.fullPath.split("\\index.js")[0];
                 if (fs.existsSync(folder + "\\MWSPlugin.json")) {
                     var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
+                    pluginInfo["folder"] = folder;
+                    pluginInfo["fullPath"] = fileInfo.fullPath;
                     plugins[pluginInfo.varName] = { info: pluginInfo, exports: require(fileInfo.fullPath) };
                 } else {
                     log("Cold not find MWSPlugin.json for plugin '" + folder + "'.", true, "Server")
@@ -323,6 +326,9 @@ function init(projectPath = ".") {
                     var plugin = pLoadList[i];
                     log("Plugin '" + plugin.info.name + "' loaded.", false, "Server")
                     plugin.exports.init(pluginExports, settings, events, io, log, commands);
+                }
+                for (i in events["loadedPlugins"]) {
+                    events["loadedPlugins"][i](plugins)
                 }
             });
     } else {
@@ -667,6 +673,7 @@ var events = {
     "post": [],
     "get": [],
     "log": [],
+    "loadedPlugins": [],
     "on": function (event, callback) {
         if (this[event] != null) {
             this[event].push(callback)

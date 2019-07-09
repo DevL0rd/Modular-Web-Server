@@ -106,10 +106,9 @@ ipcRenderer.on('getIsRunning', function (event, isRunning) {
 //     $("#chooseproject").show(1000);
 //     $("#serverTools").hide();
 // }
-
 ipcRenderer.send('getRecents');
+
 ipcRenderer.on('getRecents', function (event, recents) {
-    console.log(recents)
     if (recents[0]) {
         $("#recent-1").html(recents[0].name);
         $("#recent-1").click(function () {
@@ -159,4 +158,19 @@ $('#consoleInput').keypress(function (e) {
         return false;    //<---- Add this line
     }
 });
-//
+ipcRenderer.on('getPlugins', function (event, pluginInfoList) {
+    if (pluginInfoList[0]) {
+        $('#pluginSettingsIframe').attr('src', "file://" + pluginInfoList[0].folder + "/settings.html");
+    }
+    for (i in pluginInfoList) {
+        var pluginInfo = pluginInfoList[i];
+        var elem = $("#pluginTab0").clone().appendTo("#pluginList");
+        $(elem).attr("id", "");
+        $(elem).find('.pluginName').text(pluginInfo.name);
+        $(elem).click(function () {
+            $('#pluginSettingsIframe').attr('src', "file://" + pluginInfo.folder + "/settings.html");
+        });
+        $(elem).show(400);
+    }
+});
+ipcRenderer.send('getPlugins');

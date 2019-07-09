@@ -116,15 +116,25 @@ ipcMain.on("getRecents", function (event, data) {
 ipcMain.on("getIsRunning", function (event, data) {
   event.sender.send("getIsRunning", isRunning);
 });
-ipcMain.on("getPlugins", function (event, data) {
-  event.sender.send("getPlugins", mws.plugins);
+ipcMain.on("getPlugins", function (event) {
+  event.sender.send("getPlugins", pluginInfoList);
 });
 var isRunning = false;
+
+var pluginInfoList = [];
 ipcMain.on("openProject", function (event, project) {
   if (mws.init(project)) {
     isRunning = true;
     event.sender.send("openProject");
     addRecent({ name: mws.settings.Name, author: mws.settings.Author, path: mws.settings.projectPath });
+    pluginInfoList = [];
+    mws.events.on("loadedPlugins", function (mwsPlugins) {
+      for (i in mwsPlugins) {
+        var pluginInfo = mwsPlugins[i].info
+        pluginInfoList.push(pluginInfo);
+      }
+      event.sender.send("getPlugins", pluginInfoList);
+    })
   } else {
     event.sender.send("openProjectFail");
     //todo make ui to check
