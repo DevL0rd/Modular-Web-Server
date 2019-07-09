@@ -326,6 +326,9 @@ function init(projectPath = ".") {
                     var plugin = pLoadList[i];
                     log("Plugin '" + plugin.info.name + "' loaded.", false, "Server")
                     plugin.exports.init(pluginExports, settings, events, io, log, commands);
+                    for (i in events["loadedPlugin"]) {
+                        events["loadedPlugin"][i](plugin)
+                    }
                 }
                 for (i in events["loadedPlugins"]) {
                     events["loadedPlugins"][i](plugins)
@@ -673,6 +676,7 @@ var events = {
     "post": [],
     "get": [],
     "log": [],
+    "loadedPlugin": [],
     "loadedPlugins": [],
     "on": function (event, callback) {
         if (this[event] != null) {
