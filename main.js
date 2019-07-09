@@ -133,6 +133,7 @@ ipcMain.on("openProject", function (event, project) {
         var pluginInfo = mwsPlugins[i].info
         pluginInfoList.push(pluginInfo);
       }
+      pluginInfoList.sort((a, b) => (a.loadPriority > b.loadPriority) ? 1 : -1)
       event.sender.send("getPlugins", pluginInfoList);
     })
   } else {
