@@ -116,7 +116,9 @@ ipcMain.on("getRecents", function (event, data) {
 ipcMain.on("getIsRunning", function (event, data) {
   event.sender.send("getIsRunning", isRunning);
 });
-
+ipcMain.on("getPlugins", function (event, data) {
+  event.sender.send("getPlugins", mws.plugins);
+});
 var isRunning = false;
 ipcMain.on("openProject", function (event, project) {
   if (mws.init(project)) {

@@ -21,6 +21,7 @@
     "throttle": "latest",
     "slash": "latest",
     "ansi_up": "latest",
-    "electron-window-state": "latest"
+    "electron-window-state": "latest",
+    "readdirp": "latest"
   }
 }

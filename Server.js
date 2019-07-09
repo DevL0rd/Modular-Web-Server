@@ -3,7 +3,6 @@
 
 //Include Libs
 const url = require('url');
-const os = require('os');
 const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
@@ -13,6 +12,7 @@ const mkdirp = require('mkdirp');
 const slash = require('slash');
 const DB = require('./Devlord_modules/DB.js');
 const cc = require('./Devlord_modules/conColors.js');
+const readdirp = require('readdirp');
 var NameSpace = "HTTP";
 
 //
@@ -113,7 +113,7 @@ function log(str, isError = false, NameSpaceStr = NameSpace) {
     }, 0);
 }
 
-var plugins = [];
+var plugins = {};
 var server;
 var io;
 var settings;
@@ -292,19 +292,39 @@ function init(projectPath = ".") {
     server.on('uncaughtException', function (err) {
         log(err, true, "Server");
     });
-
     if (settings.pluginsPath && settings.pluginsPath != "") {
         log("Loading plugins...", false, "Server")
-        plugins = [];
-        fs.readdirSync(settings.pluginsPath).forEach(function (file) {
-            if (file.split(".").pop() == "js") {
-                plugins[file.split(".").shift()] = require(settings.pluginsPath + "/" + file);
-            }
-        });
-        for (var i in plugins) {
-            log("Plugin '" + i + "' loaded.", false, "Server")
-            plugins[i].init(plugins, settings, events, io, log, commands);
-        }
+        plugins = {};
+        readdirp(settings.pluginsPath, {
+            type: 'files',
+            fileFilter: ['index.js'],
+            directoryFilter: ['!.git'],
+            depth: 2
+        })
+            .on('data', (fileInfo) => {
+                var folder = fileInfo.fullPath.split("\\index.js")[0];
+                if (fs.existsSync(folder + "\\MWSPlugin.json")) {
+                    var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
+                    plugins[pluginInfo.varName] = { info: pluginInfo, exports: require(fileInfo.fullPath) };
+                } else {
+                    log("Cold not find MWSPlugin.json for plugin '" + folder + "'.", true, "Server")
+                }
+            })
+            .on('end', () => {
+                var pluginExports = {};
+                var pLoadList = [];
+                for (var i in plugins) {
+                    var plugin = plugins[i];
+                    pluginExports[plugin.info.varName] = plugin.exports;
+                    pLoadList.push(plugin);
+                }
+                pLoadList.sort((a, b) => (a.info.loadPriority > b.info.loadPriority) ? 1 : -1)
+                for (var i in pLoadList) {
+                    var plugin = pLoadList[i];
+                    log("Plugin '" + plugin.info.name + "' loaded.", false, "Server")
+                    plugin.exports.init(pluginExports, settings, events, io, log, commands);
+                }
+            });
     } else {
         log("To use plugins please configure the directory in 'MWSProject.json'", false, "Server")
     }
