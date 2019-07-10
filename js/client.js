@@ -176,6 +176,13 @@ function loadPluginPage(id) {
         $("#pluginSettingsContent").hide();
         $("#noSettings").fadeIn(400);
     }
+    $("#pluginName").html(pluginList[id].name);
+
+    if (fs.existsSync(pluginList[id].folder + "/pluginImage.png")) {
+        $("#pluginImage").attr("src", pluginList[id].folder + "/pluginImage.png");
+    } else if (fs.existsSync(pluginList[id].folder + "/pluginImage.jpg")) {
+        $("#pluginImage").attr("src", pluginList[id].folder + "/pluginImage.jpg");
+    }
 }
 
 function togglePlugin(id) {
