@@ -35,7 +35,7 @@ function createWindow() {
   mainWindow.loadFile('index.html');
   //fix transparency bug in windows 10
   mainWindow.reload();
-  //mainWindow.webContents.openDevTools();
+  mainWindow.webContents.openDevTools();
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {
@@ -72,9 +72,9 @@ app.on('browser-window-created', function (e, window) {
 const mws = require('./Server.js');
 var AU = require('ansi_up');
 var ansi_up = new AU.default;
-mws.events.on("log", function (nameSpace, text, coloredText) {
+mws.events.on("log", function (params) {
   if (htmlLoggingSender) {
-    htmlLoggingSender.send('log', ansi_up.ansi_to_html(coloredText.replace("  ", "\xa0")) + "<br>");
+    htmlLoggingSender.send('log', ansi_up.ansi_to_html(params.colorStr.replace("  ", "\xa0")) + "<br>");
   }
 });
 
@@ -118,6 +118,9 @@ ipcMain.on("getIsRunning", function (event, data) {
 });
 ipcMain.on("getPlugins", function (event) {
   event.sender.send("getPlugins", pluginInfoList);
+});
+ipcMain.on("getSettings", function (event) {
+  event.sender.send("getSettings", mws.settings);
 });
 var isRunning = false;
 

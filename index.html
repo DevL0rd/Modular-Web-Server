@@ -110,11 +110,21 @@
       <div id="plugins" class="toolBoxApp" style="display: none;">
         <div id="pluginList" class="customScroll rainbowScrollColor">
           <div id="pluginTab0" class="pluginTab" style="display: none;">
-            <span class="pluginName"></span>
+            <div class="pluginName"></div>
+            <label class="switch pluginToggle">
+              <input class="pluginToggleCheckbox" type="checkbox">
+              <span class="slider round"></span>
+            </label>
           </div>
+
         </div>
-        <iframe id="pluginSettingsIframe" src="./" sandbox="allow-same-origin allow-scripts"
-          class="customScroll"></iframe>
+        <div id="pluginSettingsContent" style="display: none;"></div>
+        <div id='noSettings' class="text-center">
+          <img style='width: 200px;' class='noSettingsImg' src='./img/pepe.png'>
+
+          <div id="noSettingsMessage" class="text-center" style="color: white; font-weight: bold;">This plugin
+            does not have a settings GUI.</div>
+        </div>
       </div>
       <div id="settings" class="toolBoxApp" style="display: none;">
 
@@ -126,7 +136,6 @@
   <div id="statusbar" class="rainbowBackgroundColor2">
     <span id="statusbartext">Ready!</span>
   </div>
-
   <div id="pageLoadingCover">
     <div class="centerVert">
       <img src="img/loading.gif" class="loadingGif">
@@ -142,9 +151,9 @@
     let $ = require('jquery');
     require('popper.js');
     require('bootstrap');
-    require('./js/animations.js');
-    require('./js/client.js');
   </script>
+  <script src="./js/animations.js"></script>
+  <script src="./js/client.js"></script>
   <script src="js/stats.js"></script>
 </body>
 

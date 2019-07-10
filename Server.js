@@ -82,18 +82,12 @@ function log(str, isError = false, NameSpaceStr = NameSpace) {
         if (isError) {
             if (settings.logging.printErrors && !settings.logging.errorNamespacePrintFilter.includes(NameSpaceStr)) {
                 console.log(colorStr);
-                for (i in events["log"]) {
-                    events["log"][i](NameSpaceStr, formattedString, colorStr);
-                }
+                events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
             }
         } else {
             if (settings.logging.printConsole && !settings.logging.consoleNamespacePrintFilter.includes(NameSpaceStr)) {
                 console.log(colorStr);
-                for (i in events["log"]) {
-                    if (events["log"][i](NameSpaceStr, formattedString, colorStr)) {
-                        events["log"][i](NameSpaceStr, formattedString, colorStr);
-                    }
-                }
+                events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
             }
         }
 
@@ -114,7 +108,6 @@ function log(str, isError = false, NameSpaceStr = NameSpace) {
 }
 
 var plugins = {};
-var pluginInfo = {}
 var server;
 var io;
 var settings;
@@ -272,16 +265,12 @@ function init(projectPath = ".") {
         io.connectioncount++;
         io.clientcount++;
         log(cc.fg.white + "[" + cc.fg.cyan + socket.request.connection.remoteAddress + cc.fg.white + "]" + cc.fg.green + " connected!" + cc.fg.white + " " + io.clientcount + " clients connected.", false, "IO");
-        for (i in events["connection"]) {
-            events["connection"][i](socket)
-        }
+        events.trigger("connection", socket);
         io.emit('connectionCount', io.clientcount)
         socket.on('disconnect', function (data) {
             io.clientcount--;
             log(cc.fg.white + "[" + cc.fg.cyan + socket.request.connection.remoteAddress + cc.fg.white + "]" + cc.fg.yellow + " disconnected..." + cc.fg.white + " " + io.clientcount + " clients connected.", false, "IO");
-            for (i in events["disconnect"]) {
-                events["disconnect"][i](socket)
-            }
+            events.trigger("disconnect", socket);
             io.emit('connectionCount', io.clientcount)
         });
     })
@@ -308,9 +297,13 @@ function init(projectPath = ".") {
                     var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
                     pluginInfo["folder"] = folder;
                     pluginInfo["fullPath"] = fileInfo.fullPath;
-                    plugins[pluginInfo.varName] = { info: pluginInfo, exports: require(fileInfo.fullPath) };
+                    if (!plugins[pluginInfo.varName]) {
+                        plugins[pluginInfo.varName] = { info: pluginInfo, exports: require(fileInfo.fullPath) };
+                    } else {
+                        log("Plugin '" + folder + "' is using a varName (" + pluginInfo.varName + ") already taken by another plugin.", true, "Server")
+                    }
                 } else {
-                    log("Cold not find MWSPlugin.json for plugin '" + folder + "'.", true, "Server")
+                    log("Could not find MWSPlugin.json for plugin '" + folder + "'.", true, "Server")
                 }
             })
             .on('end', () => {
@@ -324,15 +317,15 @@ function init(projectPath = ".") {
                 pLoadList.sort((a, b) => (a.info.loadPriority > b.info.loadPriority) ? 1 : -1)
                 for (var i in pLoadList) {
                     var plugin = pLoadList[i];
-                    log("Plugin '" + plugin.info.name + "' loaded.", false, "Server")
-                    plugin.exports.init(pluginExports, settings, events, io, log, commands);
-                    for (i in events["loadedPlugin"]) {
-                        events["loadedPlugin"][i](plugin)
+                    if (plugin.info.enabled) {
+                        log("Plugin '" + plugin.info.name + "' loaded.", false, "Server")
+                        plugin.exports.init(pluginExports, settings, events, io, log, commands);
+                        events.trigger("loadedPlugin", plugin);
+                    } else {
+                        log("Plugin '" + plugin.info.name + "' is disabled and not loaded.", false, "Server")
                     }
                 }
-                for (i in events["loadedPlugins"]) {
-                    events["loadedPlugins"][i](plugins)
-                }
+                events.trigger("loadedPlugins", plugins);
             });
     } else {
         log("To use plugins please configure the directory in 'MWSProject.json'", false, "Server")
@@ -666,11 +659,14 @@ var commands = {
         usage: "exit",
         help: "Shuts the server down gracefully.",
         do: function (args, fullMessage) {
+            events.trigger("exit");
             process.exit();
         }
     }
 };
+
 var events = {
+    "exit": [],
     "connection": [],
     "disconnect": [],
     "post": [],
@@ -679,10 +675,26 @@ var events = {
     "loadedPlugin": [],
     "loadedPlugins": [],
     "on": function (event, callback) {
-        if (this[event] != null) {
-            this[event].push(callback)
+        if (this[event] && event != "trigger" && event != "on" && event != "addEvent") {
+            this[event].push(callback);
         } else {
-            log("Event '" + event + "' is not found.", true, "Server")
+            log("Event '" + event + "' is not found.", true, "Server");
+        }
+    },
+    "addEvent": function (event, callback) {
+        if (!this[event] && event != "trigger" && event != "on" && event != "addEvent") {
+            this[event] = [];
+        } else {
+            log("Event '" + event + "' already exists.", true, "Server");
+        }
+    },
+    "trigger": function (event, params = null) {
+        if (this[event] && event != "trigger" && event != "on" && event != "addEvent") {
+            for (i in this[event]) {
+                this[event][i](params);
+            }
+        } else {
+            log("Event '" + event + "' is not found.", true, "Server");
         }
     }
 };

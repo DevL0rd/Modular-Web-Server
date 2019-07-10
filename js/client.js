@@ -1,6 +1,8 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
 const remote = require('electron').remote;
+const fs = require('fs')
+var DB = require('./Devlord_modules/DB.js');
 const dialog = remote.dialog;
 var window = remote.getCurrentWindow();
 
@@ -158,18 +160,45 @@ $('#consoleInput').keypress(function (e) {
         return false;    //<---- Add this line
     }
 });
-ipcRenderer.on('getPlugins', function (event, pluginInfoList) {
-    if (pluginInfoList[0]) {
-        $('#pluginSettingsIframe').attr('src', "file://" + pluginInfoList[0].folder + "/settings.html");
+
+function loadPluginPage(id) {
+    if (fs.existsSync(pluginList[id].folder + "/settings.html")) {
+        fs.readFile(pluginList[id].folder + "/settings.html", 'utf8', function (err, contents) {
+            if (!err) {
+                $("#pluginSettingsContent").html(contents);
+            } else {
+                $("#pluginSettingsContent").html(err);
+            }
+            $("#noSettings").hide();
+            $("#pluginSettingsContent").fadeIn(400);
+        });
+    } else {
+        $("#pluginSettingsContent").hide();
+        $("#noSettings").fadeIn(400);
     }
+}
+
+function togglePlugin(id) {
+    var pluginInfo = pluginList[id];
+    if (pluginInfo.enabled) {
+        pluginInfo.enabled = false;
+    } else {
+        pluginInfo.enabled = true;
+    }
+    DB.save(pluginInfo.folder + "/MWSPlugin.json", pluginInfo)
+}
+var pluginList = [];
+
+ipcRenderer.on('getPlugins', function (event, pluginInfoList) {
+    pluginList = pluginInfoList;
     for (i in pluginInfoList) {
         var pluginInfo = pluginInfoList[i];
         var elem = $("#pluginTab0").clone().appendTo("#pluginList");
         $(elem).attr("id", "");
         $(elem).find('.pluginName').text(pluginInfo.name);
-        $(elem).click(function () {
-            $('#pluginSettingsIframe').attr('src', "file://" + pluginInfo.folder + "/settings.html");
-        });
+        $(elem).attr("onclick", "loadPluginPage('" + i + "');");
+        $(elem).find('.pluginToggleCheckbox').prop("checked", pluginInfo.enabled);
+        $(elem).find('.pluginToggleCheckbox').attr("onchange", "togglePlugin('" + i + "');");
         $(elem).show(400);
     }
 });
