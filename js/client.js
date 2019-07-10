@@ -1,10 +1,10 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
 const remote = require('electron').remote;
+var window = remote.getCurrentWindow();
+const dialog = remote.dialog;
 const fs = require('fs')
 var DB = require('./Devlord_modules/DB.js');
-const dialog = remote.dialog;
-var window = remote.getCurrentWindow();
 
 var debug = true;
 if (debug) {
@@ -56,6 +56,7 @@ document.getElementById("close-btn").addEventListener("click", function (e) {
 });
 
 document.getElementById("dev-btn").addEventListener("click", function (e) {
+    console.log(window.webContents);
     window.webContents.openDevTools();
 });
 
@@ -133,25 +134,25 @@ ipcRenderer.on('getRecents', function (event, recents) {
 
 ipcRenderer.on('openProject', function (event, data) {
     $("#chooseproject").hide();
-    $("#serverTools").show(1000);
+    $("#serverTools").fadeIn(400);
 });
 
 $("#browser-btn").click(function () {
     $(".toolBoxApp").hide();
-    $("#browser").fadeIn(1000);
+    $("#browser").fadeIn(400);
     $('#browser').attr('src', "http://localhost/");
 });
 $("#stats-btn").click(function () {
     $(".toolBoxApp").hide();
-    $("#stats").fadeIn(1000);
+    $("#stats").fadeIn(400);
 });
 $("#plugins-btn").click(function () {
     $(".toolBoxApp").hide();
-    $("#plugins").fadeIn(1000);
+    $("#plugins").fadeIn(400);
 });
 $("#settings-btn").click(function () {
     $(".toolBoxApp").hide();
-    $("#settings").fadeIn(1000);
+    $("#settings").fadeIn(400);
 });
 $('#consoleInput').keypress(function (e) {
     if (e.which == 13) {
@@ -200,6 +201,7 @@ ipcRenderer.on('getPlugins', function (event, pluginInfoList) {
     pluginList = pluginInfoList;
     for (i in pluginInfoList) {
         var pluginInfo = pluginInfoList[i];
+        pluginInfo["pluginElement"] = elem;
         var elem = $("#pluginTab0").clone().appendTo("#pluginList");
         $(elem).attr("id", "");
         $(elem).find('.pluginName').text(pluginInfo.name);

@@ -108,6 +108,7 @@ function log(str, isError = false, NameSpaceStr = NameSpace) {
 }
 
 var plugins = {};
+var pluginExports = {};
 var server;
 var io;
 var settings;
@@ -307,7 +308,7 @@ function init(projectPath = ".") {
                 }
             })
             .on('end', () => {
-                var pluginExports = {};
+                pluginExports = {};
                 var pLoadList = [];
                 for (var i in plugins) {
                     var plugin = plugins[i];
@@ -642,7 +643,7 @@ var commands = {
         help: "Unban an IP address.",
         do: function (args, fullMessage) {
             if (!args.length || args[0].split(".").length != 4) {
-                console.log("Usage: " + this.usage);
+                log("Usage: " + this.usage, false, "CONSOLE")
                 return;
             }
             var ip = args[0];

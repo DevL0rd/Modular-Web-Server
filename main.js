@@ -122,6 +122,7 @@ ipcMain.on("getPlugins", function (event) {
 ipcMain.on("getSettings", function (event) {
   event.sender.send("getSettings", mws.settings);
 });
+
 var isRunning = false;
 
 var pluginInfoList = [];

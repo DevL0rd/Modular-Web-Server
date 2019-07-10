@@ -118,12 +118,11 @@
               <span class="slider round"></span>
             </label>
           </div>
-
         </div>
         <div id="pluginInfo">
           <img id="pluginImage" style='width: 100px; height: 100px;' class='noSettingsImg' src='./img/noImage.png'>
-          <span id="pluginName"> </span>
-          <span id="pluginAuthor"></span>
+          <div id="pluginName"> </div>
+          <div id="pluginAuthor"></div>
         </div>
         <div id="pluginSettingsContent" class="customScroll rainbowScrollColor" style="display: none;"></div>
         <div id='noSettings' class="text-center customScroll rainbowScrollColor">
@@ -134,9 +133,9 @@
         </div>
       </div>
       <div id="settings" class="toolBoxApp" style="display: none;">
-
+        <input id="settingsSearch" type="text" placeholder="Search settings">
       </div>
-      <div id="consoleContainer" class="customScroll rainbowScrollColor"></div>
+      <div id="consoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
       <input id="consoleInput" type="text"><br>
     </div>
   </div>
@@ -159,6 +158,7 @@
     require('popper.js');
     require('bootstrap');
   </script>
+  <!-- <script src="./js/isotope.pkgd.min.js"></script> -->
   <script src="./js/animations.js"></script>
   <script src="./js/client.js"></script>
   <script src="js/stats.js"></script>

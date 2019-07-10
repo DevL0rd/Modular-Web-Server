@@ -185,6 +185,8 @@ setInterval(function () {
 	$(".rainbowFontColor").css("color", "rgb(" + r + "," + g + "," + b + ")");
 	$(".rainbowBackgroundColor").css("background", "linear-gradient(to right, rgba(" + r + "," + g + "," + b + ", 0.8) 0%, rgba(" + r2 + "," + g2 + "," + b2 + ", 0.8) 100%)");
 	$(".rainbowBackgroundColor2").css("background", "linear-gradient(to right, rgba(" + r3 + "," + g3 + "," + b3 + ", 0.8) 0%, rgba(" + r4 + "," + g4 + "," + b4 + ", 0.8) 100%)");
-	$(".customScroll::-webkit-scrollbar-thumb").css("background-color", "rgba(" + r + "," + g + "," + b + ", 1)");
+	$(".customScroll::-webkit-scrollbar-thumb").css("background-color", "rgba(" + r + "," + g + "," + b + ", 0.8)");
+	$("input:checked + .slider").css("background", "linear-gradient(to right, rgba(" + r + "," + g + "," + b + ", 0.7) 0%, rgba(" + r2 + "," + g2 + "," + b2 + ", 0.7) 100%)");
+	$(":not(input:checked) + .slider").css("background", "rgba(0,0,0, 0.7)");
 }, 40);
 

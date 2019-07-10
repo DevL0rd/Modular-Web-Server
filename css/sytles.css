@@ -239,7 +239,7 @@ textarea:focus, input:focus{
     left: 50px;
     height: calc(70% - 57px);
     width: calc(100% - 50px);
-    background: transparent;
+    background: rgba(0,0,0,0.5);
     overflow: none;
 }
 .tool-bar-btns{
@@ -285,13 +285,19 @@ textarea:focus, input:focus{
     box-shadow: 4px 0px 14px 0px rgba(0,0,0,0.7);
 }
 .pluginTab{
+    
+    position: relative;
     padding: 8px;
+    height: 55px;
     border-radius: 8px;
     background: rgba(39, 39, 39, 0.8);
     color: white;
     margin-bottom: 8px;
+    box-shadow: inset 4px 4px 31px -10px rgba(0,0,0,0.75);
 }
-
+.selected{
+    background: rgba(255, 255, 255, 0.1);
+}
 .pluginTab:hover {
     background-color: rgba(255, 255, 255, 0.1);
     transition: 0.3s;
@@ -303,24 +309,32 @@ textarea:focus, input:focus{
 }
 .pluginName{
     float: left;
-    overflow: hidden;
     color: white;
-    width: calc(100% - 36px);
+    width: calc(100% - 45px);
     margin-top: 8px;
+    margin-right: 8px;
     font-size: 14px;
-    overflow: none;
+    white-space: nowrap;
+    overflow: hidden;
 }
 #pluginInfo {
     float: left;
     height: 120px;
     width: calc(80%);
-    background: linear-gradient(to bottom, rgba(0,0,0, 0.7) 0%,rgba(0,0,0,0.5) 60%,rgba(0,0,0,0.5) 60%);
+    background: linear-gradient(to bottom, rgba(0,0,0, 0.4) 0%,rgba(0,0,0,0.1) 80%,rgba(0,0,0,0.1) 100%);
     box-shadow: 0px 4px 14px 0px rgba(0,0,0,0.7);
 }
 #pluginImage {
     float: left;
     margin-left: 8px;
     margin-top: 10px;
+}
+.pluginImage {
+    display: inline-block;
+    position: absolute;
+    top: 0px;
+    left: 0px;
+    height: 55px;
 }
 #pluginName {
     float: left;
@@ -333,7 +347,6 @@ textarea:focus, input:focus{
     float: left;
     height: calc(100% - 120px);
     width: calc(80%);
-    background: rgba(0,0,0,0.5);
     overflow: auto;
     border: none;
     padding: 8px;
@@ -342,7 +355,7 @@ textarea:focus, input:focus{
     float: left;
     height: calc(100% - 120px);
     width: calc(80%);
-    background: #0000009c;
+    background: transparent;
     overflow: auto;
     border: none;
     padding-top: 5px;
@@ -350,69 +363,15 @@ textarea:focus, input:focus{
 #noSettingsMessage {
     margin-top: 8px;
 }
-.pluginToggle {
-    
-}
-/* The switch - the box around the slider */
-.switch {
-    position: relative;
-    display: inline-block;
-    width: 35px;
-    height: 24px;
-    margin-top: 7px;
-  }
-  
-  /* Hide default HTML checkbox */
-  .switch input {
-    opacity: 0;
-    width: 0;
-    height: 0;
-  }
-  
-  /* The slider */
-  .slider {
-    position: absolute;
-    cursor: pointer;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: #ccc;
-    -webkit-transition: .4s;
-    transition: .4s;
-  }
-  
-  .slider:before {
-    position: absolute;
-    content: "";
-    height: 14px;
-    width: 14px;
-    left: 5px;
-    bottom: 5px;
-    background-color: white;
-    -webkit-transition: .4s;
-    transition: .4s;
-  }
-  
-  input:checked + .slider {
-    background-color: #2196F3;
-  }
-  
-  input:focus + .slider {
-    box-shadow: 0 0 1px #2196F3;
-  }
-  
-  input:checked + .slider:before {
-    -webkit-transform: translateX(12px);
-    -ms-transform: translateX(12px);
-    transform: translateX(12px);
-  }
-  
-  /* Rounded sliders */
-  .slider.round {
-    border-radius: 34px;
-  }
-  
-  .slider.round:before {
-    border-radius: 50%;
-  }
+
+  #settingsSearch {
+      background: black;
+      border: none;
+      border-radius: 25px;
+      color: white;
+      padding-left: 8px;
+      height: 40px;
+      width: calc(100% - 20px);
+      margin-top: 10px;
+      margin-left: 10px;
+  };
