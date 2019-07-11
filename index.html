@@ -45,10 +45,14 @@
     </div>
     <div id="serverTools" style="display: none;">
       <div id="toolBoxLeft" class="customScroll rainbowScrollColor">
-        <button id="browser-btn" class="tool-bar-btns"><i class="fab fa-chrome"></i></button>
-        <button id="stats-btn" class="tool-bar-btns"><i class="fas fa-chart-pie"></i></button>
-        <button id="plugins-btn" class="tool-bar-btns"><i class="fas fa-plug"></i></button>
-        <button id="settings-btn" class="tool-bar-btns"><i class="fas fa-cogs"></i></button>
+        <button id="browser-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+          title="Live View"><i class="fab fa-chrome"></i></button>
+        <button id="stats-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+          title="Stats"><i class="fas fa-chart-pie"></i></button>
+        <button id="plugins-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+          title="Plugins"><i class="fas fa-plug"></i></button>
+        <button id="settings-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+          title="Settings"><i class="fas fa-cogs"></i></button>
       </div>
       <iframe id="browser" src="http://localhost/" sandbox="allow-same-origin allow-scripts"
         class="customScroll toolBoxApp"></iframe>
@@ -135,8 +139,8 @@
       <div id="settings" class="toolBoxApp" style="display: none;">
         <input id="settingsSearch" type="text" placeholder="Search settings">
         <div id="settingsGrid" class="row">
-          <div class="col-sm-3 settingCol">
-            <div class="input-group centerHorz">
+          <div class="col-md-4 settingCol">
+            <div class="input-group centerHorz flex-nowrap">
               <div class="input-group-prepend">
                 <span class="input-group-text">Debug</span>
               </div>
@@ -148,8 +152,21 @@
               </span>
             </div>
           </div>
-          <div class="col-sm-3 settingCol">
-            <div class="input-group centerHorz">
+          <div class="col-md-4 settingCol">
+            <div class="input-group centerHorz flex-nowrap">
+              <div class="input-group-prepend">
+                <span class="input-group-text">Dev Tools On Start</span>
+              </div>
+              <span class="input-group-append input-group-text">
+                <label class="switch">
+                  <input id="devToolsOnStartup" type="checkbox">
+                  <span class="slider round"></span>
+                </label>
+              </span>
+            </div>
+          </div>
+          <div class="col-md-4 settingCol">
+            <div class="input-group centerHorz flex-nowrap">
               <div class="input-group-prepend">
                 <span class="input-group-text dark-group-text">Rainbow Accents</span>
               </div>
@@ -185,6 +202,9 @@
     let $ = require('jquery');
     require('popper.js');
     require('bootstrap');
+    $(function () {
+      $('[data-toggle="tooltip"]').tooltip({ boundary: 'window' })
+    })
   </script>
   <script src="./js/animations.js"></script>
   <script src="./js/client.js"></script>

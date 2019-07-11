@@ -1,11 +1,9 @@
 //Authour: Dustin Harris
 //GitHub: https://github.com/DevL0rd
 const remote = require('electron').remote;
-var window = remote.getCurrentWindow();
 const dialog = remote.dialog;
 const fs = require('fs')
 var DB = require('./Devlord_modules/DB.js');
-
 Element.prototype.remove = function () {
     this.parentElement.removeChild(this);
 }
@@ -36,9 +34,11 @@ if (!Array.prototype.includes) {
     });
 }
 document.getElementById("min-btn").addEventListener("click", function (e) {
+    var window = remote.getCurrentWindow();
     window.minimize();
 });
 document.getElementById("max-btn").addEventListener("click", function (e) {
+    var window = remote.getCurrentWindow();
     if (!window.isMaximized()) {
         window.maximize();
     } else {
@@ -47,14 +47,17 @@ document.getElementById("max-btn").addEventListener("click", function (e) {
 });
 
 document.getElementById("close-btn").addEventListener("click", function (e) {
+    var window = remote.getCurrentWindow();
     window.close();
 });
 
 document.getElementById("dev-btn").addEventListener("click", function (e) {
-    console.log(window.webContents);
-    window.webContents.openDevTools();
+    openDevTools();
 });
-
+function openDevTools() {
+    var window = remote.getCurrentWindow();
+    window.webContents.openDevTools();
+}
 document.getElementById("rld-btn").addEventListener("click", function (e) {
     location.reload();
 });
@@ -136,18 +139,22 @@ $("#browser-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#browser").fadeIn(400);
     $('#browser').attr('src', "http://localhost/");
+    $('#browser-btn').tooltip('hide');
 });
 $("#stats-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#stats").fadeIn(400);
+    $('#stats-btn').tooltip('hide');
 });
 $("#plugins-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#plugins").fadeIn(400);
+    $('#plugins-btn').tooltip('hide');
 });
 $("#settings-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#settings").fadeIn(400);
+    $('#settings-btn').tooltip('hide');
 });
 $('#consoleInput').keypress(function (e) {
     if (e.which == 13) {
@@ -158,6 +165,9 @@ $('#consoleInput').keypress(function (e) {
 });
 
 function loadPluginPage(id) {
+    if (currentPlugin == id) return;
+    currentPlugin = id;
+    $(pluginList[id].elem).toggleClass(".selected");
     if (fs.existsSync(pluginList[id].folder + "/settings.html")) {
         fs.readFile(pluginList[id].folder + "/settings.html", 'utf8', function (err, contents) {
             if (!err) {
@@ -180,7 +190,7 @@ function loadPluginPage(id) {
         $("#pluginImage").attr("src", pluginList[id].folder + "/pluginImage.jpg");
     }
 }
-
+var currentPlugin = 0;
 function togglePlugin(id) {
     var pluginInfo = pluginList[id];
     if (pluginInfo.enabled) {
@@ -206,6 +216,9 @@ ipcRenderer.on('getPlugins', function (event, pluginInfoList) {
         $(elem).find('.pluginToggleCheckbox').prop("checked", pluginInfo.enabled);
         $(elem).find('.pluginToggleCheckbox').attr("onchange", "togglePlugin('" + i + "');");
         $(elem).show(400);
+    }
+    if (pluginList) {
+        loadPluginPage(0);
     }
 });
 ipcRenderer.send('getPlugins');

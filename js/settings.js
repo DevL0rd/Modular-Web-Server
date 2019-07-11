@@ -3,7 +3,8 @@ var debug = true;
 var clientSettings = {
     debug: false,
     rainbow: false,
-    accentColor: "rgba(0,0,255,0.8)"
+    accentColor: "rgba(0,0,255,0.8)",
+    devToolsOnStartup: false
 };
 var clientSettingsPath = "./settings.json";
 if (fs.existsSync(clientSettingsPath)) {
@@ -27,7 +28,11 @@ function loadClientSettings() {
     clientSettings = DB.load(clientSettingsPath)
     $("#debugEnabled").prop("checked", clientSettings.debug);
     $("#rainbowEnabled").prop("checked", clientSettings.rainbowEnabled);
+    $("#devToolsOnStartup").prop("checked", clientSettings.devToolsOnStartup);
     applyClientSettings()
+    if (clientSettings.devToolsOnStartup) {
+        openDevTools();
+    }
 }
 
 function applyClientSettings() {
@@ -51,6 +56,11 @@ $("#rainbowEnabled").on('change', function () {
 });
 $("#debugEnabled").on('change', function () {
     clientSettings.debug = $("#debugEnabled").prop("checked");
+    saveClientSettings();
+    applyClientSettings();
+});
+$("#devToolsOnStartup").on('change', function () {
+    clientSettings.devToolsOnStartup = $("#devToolsOnStartup").prop("checked");
     saveClientSettings();
     applyClientSettings();
 });

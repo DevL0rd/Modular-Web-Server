@@ -381,3 +381,12 @@ textarea:focus, input:focus{
     background-color: rgba(40,40,0.75);
     color: white;
   }
+
+  
+    .validInput {
+        border: 3px solid green;
+    }
+
+    .invalidInput {
+        border: 3px solid tomato;
+    }

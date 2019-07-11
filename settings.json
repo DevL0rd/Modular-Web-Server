@@ -7,5 +7,6 @@
 		"b": 20,
 		"a": 0.8
 	},
-	"rainbowEnabled": true
+	"rainbowEnabled": true,
+	"devToolsOnStartup": true
 }
