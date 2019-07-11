@@ -134,6 +134,34 @@
       </div>
       <div id="settings" class="toolBoxApp" style="display: none;">
         <input id="settingsSearch" type="text" placeholder="Search settings">
+        <div id="settingsGrid" class="row">
+          <div class="col-sm-3 settingCol">
+            <div class="input-group centerHorz">
+              <div class="input-group-prepend">
+                <span class="input-group-text">Debug</span>
+              </div>
+              <span class="input-group-append input-group-text">
+                <label class="switch">
+                  <input id="debugEnabled" type="checkbox">
+                  <span class="slider round"></span>
+                </label>
+              </span>
+            </div>
+          </div>
+          <div class="col-sm-3 settingCol">
+            <div class="input-group centerHorz">
+              <div class="input-group-prepend">
+                <span class="input-group-text dark-group-text">Rainbow Accents</span>
+              </div>
+              <span class="input-group-append input-group-text dark-group-text">
+                <label class="switch">
+                  <input id="rainbowEnabled" type="checkbox">
+                  <span class="slider round"></span>
+                </label>
+              </span>
+            </div>
+          </div>
+        </div>
       </div>
       <div id="consoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
       <input id="consoleInput" type="text"><br>
@@ -158,9 +186,9 @@
     require('popper.js');
     require('bootstrap');
   </script>
-  <!-- <script src="./js/isotope.pkgd.min.js"></script> -->
   <script src="./js/animations.js"></script>
   <script src="./js/client.js"></script>
+  <script src="./js/settings.js"></script>
   <script src="js/stats.js"></script>
 </body>
 

@@ -132,61 +132,76 @@ var r = 255, g = 0, b = 0;
 var r2 = 225, g2 = 30, b2 = 0;
 var r3 = 205, g3 = 50, b3 = 0;
 var r4 = 175, g4 = 80, b4 = 0;
-setInterval(function () {
-	if (r > 0 && b == 0) {
-		r--;
-		g++;
-	}
-	if (g > 0 && r == 0) {
-		g--;
-		b++;
-	}
-	if (b > 0 && g == 0) {
-		r++;
-		b--;
-	}
-	if (r2 > 0 && b2 == 0) {
-		r2--;
-		g2++;
-	}
-	if (g2 > 0 && r2 == 0) {
-		g2--;
-		b2++;
-	}
-	if (b2 > 0 && g2 == 0) {
-		r2++;
-		b2--;
-	}
-	if (r3 > 0 && b3 == 0) {
-		r3--;
-		g3++;
-	}
-	if (g3 > 0 && r3 == 0) {
-		g3--;
-		b3++;
-	}
-	if (b3 > 0 && g3 == 0) {
-		r3++;
-		b3--;
-	}
-	if (r4 > 0 && b4 == 0) {
-		r4--;
-		g4++;
-	}
-	if (g4 > 0 && r4 == 0) {
-		g4--;
-		b4++;
-	}
-	if (b4 > 0 && g4 == 0) {
-		r4++;
-		b4--;
-	}
-	//console.log("linear-gradient(to right, rgba(" + r + "," + g + "," + b + ", 1) 0%, rgba(" + r2 + "," + g2 + "," + b2 + ", 1) 100%)")
+var rainbowAccentInterval
+function rainbowAccent(delay = 40) {
+	clearInterval(rainbowAccentInterval);
+	r = 255, g = 0, b = 0;
+	r2 = 225, g2 = 30, b2 = 0;
+	r3 = 205, g3 = 50, b3 = 0;
+	r4 = 175, g4 = 80, b4 = 0;
+	rainbowAccentInterval = setInterval(function () {
+		if (r > 0 && b == 0) {
+			r--;
+			g++;
+		}
+		if (g > 0 && r == 0) {
+			g--;
+			b++;
+		}
+		if (b > 0 && g == 0) {
+			r++;
+			b--;
+		}
+		if (r2 > 0 && b2 == 0) {
+			r2--;
+			g2++;
+		}
+		if (g2 > 0 && r2 == 0) {
+			g2--;
+			b2++;
+		}
+		if (b2 > 0 && g2 == 0) {
+			r2++;
+			b2--;
+		}
+		if (r3 > 0 && b3 == 0) {
+			r3--;
+			g3++;
+		}
+		if (g3 > 0 && r3 == 0) {
+			g3--;
+			b3++;
+		}
+		if (b3 > 0 && g3 == 0) {
+			r3++;
+			b3--;
+		}
+		if (r4 > 0 && b4 == 0) {
+			r4--;
+			g4++;
+		}
+		if (g4 > 0 && r4 == 0) {
+			g4--;
+			b4++;
+		}
+		if (b4 > 0 && g4 == 0) {
+			r4++;
+			b4--;
+		}
+		$(".rainbowFontColor").css("color", "rgb(" + r + "," + g + "," + b + ")");
+		$(".rainbowBackgroundColor").css("background", "linear-gradient(to right, rgba(" + r + "," + g + "," + b + ", 0.8) 0%, rgba(" + r2 + "," + g2 + "," + b2 + ", 0.8) 100%)");
+		$(".rainbowBackgroundColor2").css("background", "linear-gradient(to right, rgba(" + r3 + "," + g3 + "," + b3 + ", 0.8) 0%, rgba(" + r4 + "," + g4 + "," + b4 + ", 0.8) 100%)");
+		// $(".customScroll::-webkit-scrollbar-thumb").css("background", "rgba(" + r + "," + g + "," + b + ", 0.8)");
+		$("input:checked + .slider").css("background", "linear-gradient(to right, rgba(" + r + "," + g + "," + b + ", 0.7) 0%, rgba(" + r2 + "," + g2 + "," + b2 + ", 0.7) 100%)");
+		$(":not(input:checked) + .slider").css("background", "rgba(0,0,0, 0.7)");
+	}, delay);
+}
+function setAccentColor(r, g, b, a) {
+	clearInterval(rainbowAccentInterval);
 	$(".rainbowFontColor").css("color", "rgb(" + r + "," + g + "," + b + ")");
-	$(".rainbowBackgroundColor").css("background", "linear-gradient(to right, rgba(" + r + "," + g + "," + b + ", 0.8) 0%, rgba(" + r2 + "," + g2 + "," + b2 + ", 0.8) 100%)");
-	$(".rainbowBackgroundColor2").css("background", "linear-gradient(to right, rgba(" + r3 + "," + g3 + "," + b3 + ", 0.8) 0%, rgba(" + r4 + "," + g4 + "," + b4 + ", 0.8) 100%)");
-	$(".customScroll::-webkit-scrollbar-thumb").css("background-color", "rgba(" + r + "," + g + "," + b + ", 0.8)");
-	$("input:checked + .slider").css("background", "linear-gradient(to right, rgba(" + r + "," + g + "," + b + ", 0.7) 0%, rgba(" + r2 + "," + g2 + "," + b2 + ", 0.7) 100%)");
+	$(".rainbowBackgroundColor").css("background", "rgba(" + r + "," + g + "," + b + ", " + a + ")");
+	$(".rainbowBackgroundColor2").css("background", "rgba(" + r + "," + g + "," + b + ", " + a + ")");
+	// $(".customScroll::-webkit-scrollbar-thumb").css("background", "rgba(" + r + "," + g + "," + b + ", 0.8)");
+	$("input:checked + .slider").css("background", "rgba(" + r + "," + g + "," + b + ", " + a + ")");
 	$(":not(input:checked) + .slider").css("background", "rgba(0,0,0, 0.7)");
-}, 40);
-
+}

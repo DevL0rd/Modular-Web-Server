@@ -6,11 +6,6 @@ const dialog = remote.dialog;
 const fs = require('fs')
 var DB = require('./Devlord_modules/DB.js');
 
-var debug = true;
-if (debug) {
-    $("#dev-btn").show();
-    $("#rld-btn").show();
-}
 Element.prototype.remove = function () {
     this.parentElement.removeChild(this);
 }
@@ -194,9 +189,11 @@ function togglePlugin(id) {
         pluginInfo.enabled = true;
     }
     DB.save(pluginInfo.folder + "/MWSPlugin.json", pluginInfo)
+    if (!clientSettings.rainbowEnabled) {
+        setAccentColor(clientSettings.accentColor.r, clientSettings.accentColor.g, clientSettings.accentColor.b, clientSettings.accentColor.a);
+    }
 }
 var pluginList = [];
-
 ipcRenderer.on('getPlugins', function (event, pluginInfoList) {
     pluginList = pluginInfoList;
     for (i in pluginInfoList) {

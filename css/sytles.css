@@ -374,4 +374,10 @@ textarea:focus, input:focus{
       width: calc(100% - 20px);
       margin-top: 10px;
       margin-left: 10px;
+      margin-bottom: 10px;
   };
+
+  .dark-group-text {
+    background-color: rgba(40,40,0.75);
+    color: white;
+  }
