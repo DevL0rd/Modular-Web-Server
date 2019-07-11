@@ -35,7 +35,6 @@ function createWindow() {
   mainWindow.loadFile('index.html');
   //fix transparency bug in windows 10
   mainWindow.reload();
-  mainWindow.webContents.openDevTools();
 
   // Emitted when the window is closed.
   mainWindow.on('closed', function () {

@@ -682,7 +682,7 @@ var events = {
             log("Event '" + event + "' is not found.", true, "Server");
         }
     },
-    "addEvent": function (event, callback) {
+    "addEvent": function (event) {
         if (!this[event] && event != "trigger" && event != "on" && event != "addEvent") {
             this[event] = [];
         } else {
