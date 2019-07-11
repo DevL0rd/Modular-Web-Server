@@ -179,18 +179,22 @@ textarea:focus, input:focus{
     left: 60px;
     background: transarent;
 }
+#console-btn{
+    position: absolute;
+    bottom: 0px;
+    left: 0px;
+}
 #consoleContainer {
     position: absolute;
     bottom: 50px;
     left: 50px;
     height: calc(30% - 25px);
     width: calc(100% - 50px);
-    background: rgba(0,0,0,0.4);
+    background: rgba(40,40,40,0.7);
     overflow-y:auto;
     font-size: 10px;
     padding-left: 6px;
-    border-top: solid 4px;
-    border-top-color: rgba(59, 59, 59, 0.7);
+    border-top:4px solid rgba(59, 59, 59, 0.7);
 }
 #consoleInput{
     position: absolute;
@@ -237,7 +241,7 @@ textarea:focus, input:focus{
     position: absolute;
     top: 32px;
     left: 50px;
-    height: calc(70% - 57px);
+    height: calc(100% - 57px);
     width: calc(100% - 50px);
     background: rgba(0,0,0,0.5);
     overflow: none;

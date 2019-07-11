@@ -1,10 +1,15 @@
 
 var debug = true;
 var clientSettings = {
-    debug: false,
-    rainbow: false,
-    accentColor: "rgba(0,0,255,0.8)",
-    devToolsOnStartup: false
+    "debug": true,
+    "accentColor": {
+        "r": 50,
+        "g": 50,
+        "b": 50,
+        "a": 0.9
+    },
+    "rainbowEnabled": false,
+    "devToolsOnStartup": false
 };
 var clientSettingsPath = "./settings.json";
 if (fs.existsSync(clientSettingsPath)) {

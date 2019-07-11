@@ -53,6 +53,8 @@
           title="Plugins"><i class="fas fa-plug"></i></button>
         <button id="settings-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
           title="Settings"><i class="fas fa-cogs"></i></button>
+        <button id="console-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+          title="Console"><i class="fas fa-terminal"></i></button>
       </div>
       <iframe id="browser" src="http://localhost/" sandbox="allow-same-origin allow-scripts"
         class="customScroll toolBoxApp"></iframe>
@@ -180,8 +182,10 @@
           </div>
         </div>
       </div>
-      <div id="consoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
-      <input id="consoleInput" type="text"><br>
+      <div id="console">
+        <div id="consoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
+        <input id="consoleInput" type="text"><br>
+      </div>
     </div>
   </div>
   <div id="statusbar" class="rainbowBackgroundColor2">

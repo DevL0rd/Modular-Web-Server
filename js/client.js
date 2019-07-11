@@ -84,6 +84,7 @@ var ipcRenderer = require('electron').ipcRenderer;
 var logTimeout
 ipcRenderer.on('log', function (event, genHtml) {
     $("#consoleContainer").append(genHtml);
+    $("#statusbartext").html("Console: " + genHtml);
     clearTimeout(logTimeout);
     logTimeout = setTimeout(function () {
         $("#consoleContainer").animate({ scrollTop: $('#consoleContainer').prop("scrollHeight") }, 300);
@@ -160,6 +161,18 @@ $("#settings-btn").click(function () {
     $("#settings").fadeIn(400);
     $('#settings-btn').tooltip('hide');
 });
+var consoleVisible = true;
+$("#console-btn").click(function () {
+    $('#console-btn').tooltip('hide');
+    if (consoleVisible) {
+        $("#console").fadeOut(400);
+        consoleVisible = false;
+    } else {
+        $("#console").fadeIn(400);
+        consoleVisible = true;
+    }
+});
+
 $('#consoleInput').keypress(function (e) {
     if (e.which == 13) {
         ipcRenderer.send('consoleCommand', $('#consoleInput').val());
