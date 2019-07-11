@@ -37,11 +37,15 @@ document.getElementById("min-btn").addEventListener("click", function (e) {
     var window = remote.getCurrentWindow();
     window.minimize();
 });
+var isMaximized = false;
 document.getElementById("max-btn").addEventListener("click", function (e) {
     var window = remote.getCurrentWindow();
-    if (!window.isMaximized()) {
+    // !window.isMaximized()
+    if (!isMaximized) {
+        isMaximized = true;
         window.maximize();
     } else {
+        isMaximized = false;
         window.unmaximize();
     }
 });
@@ -198,7 +202,11 @@ function togglePlugin(id) {
     } else {
         pluginInfo.enabled = true;
     }
-    DB.save(pluginInfo.folder + "/MWSPlugin.json", pluginInfo)
+    var cleanedPluginList = $.extend({}, pluginList);
+    for (i in cleanedPluginList) {
+        delete cleanedPluginList[i].pluginElement;
+    }
+    DB.save(pluginInfo.folder + "/MWSPlugin.json", pluginList[id])
     if (!clientSettings.rainbowEnabled) {
         setAccentColor(clientSettings.accentColor.r, clientSettings.accentColor.g, clientSettings.accentColor.b, clientSettings.accentColor.a);
     }
