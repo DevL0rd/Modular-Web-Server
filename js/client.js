@@ -149,16 +149,19 @@ $("#browser-btn").click(function () {
 $("#stats-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#stats").fadeIn(400);
+    $('#browser').attr('src', "");
     $('#stats-btn').tooltip('hide');
 });
 $("#plugins-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#plugins").fadeIn(400);
+    $('#browser').attr('src', "");
     $('#plugins-btn').tooltip('hide');
 });
 $("#settings-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#settings").fadeIn(400);
+    $('#browser').attr('src', "");
     $('#settings-btn').tooltip('hide');
 });
 var consoleVisible = true;
