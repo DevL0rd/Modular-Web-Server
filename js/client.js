@@ -89,7 +89,7 @@ ipcRenderer.on('log', function (event, genHtml) {
     clearTimeout(logTimeout);
     logTimeout = setTimeout(function () {
         $("#consoleContainer").animate({ scrollTop: $('#consoleContainer').prop("scrollHeight") }, 300);
-        $("#fullConsoleContainer").animate({ scrollTop: $('#consoleContainer').prop("scrollHeight") }, 300);
+        $("#fullConsoleContainer").animate({ scrollTop: $('#fullConsoleContainer').prop("scrollHeight") }, 300);
     }, 300);
 });
 ipcRenderer.send('registerForHTMLLogging');
