@@ -1,13 +1,26 @@
 
+
 const DB = require('./Devlord_modules/DB.js');
 const windowStateKeeper = require('electron-window-state');
 const fs = require('fs');
+const mws = require('./Server.js');
+
 // Modules to control application life and create native browser window
 const { app, BrowserWindow, ipcMain } = require('electron')
+console.clear();
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
+var args = process.argv.slice(5);
+var usingUI = true;
+if (args.length > 1) {
+  if (args.includes("noui")) {
 
+    if (mws.init(args[0])) {
+      usingUI = false;
+    }
+  }
+}
 function createWindow() {
   // Load the previous state with fallback to defaults
   let mainWindowState = windowStateKeeper({
@@ -42,13 +55,13 @@ function createWindow() {
     // in an array if your app supports multi windows, this is the time
     // when you should delete the corresponding element.
     mainWindow = null
-  })
+  });
 }
 
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', function () { setTimeout(createWindow, 300) });
+app.on('ready', function () { if (usingUI) setTimeout(createWindow, 300); });
 
 // Quit when all windows are closed.
 app.on('window-all-closed', function () {
@@ -67,8 +80,6 @@ app.on('browser-window-created', function (e, window) {
   window.setMenu(null);
 });
 
-//Your APP Code Here
-const mws = require('./Server.js');
 var AU = require('ansi_up');
 var ansi_up = new AU.default;
 mws.events.on("log", function (params) {
@@ -76,6 +87,7 @@ mws.events.on("log", function (params) {
     htmlLoggingSender.send('log', ansi_up.ansi_to_html(params.colorStr.replace("  ", "\xa0")) + "<br>");
   }
 });
+
 
 ipcMain.on('consoleCommand', (event, fullMessage) => {
   var args = fullMessage.split(" ");
@@ -111,6 +123,9 @@ function addRecent(projectInformation) {
 }
 ipcMain.on("getRecents", function (event, data) {
   event.sender.send("getRecents", recents);
+  if (!isRunning && args) {
+    openProject(args[0], event);
+  }
 });
 ipcMain.on("getIsRunning", function (event, data) {
   event.sender.send("getIsRunning", isRunning);
@@ -126,6 +141,9 @@ var isRunning = false;
 
 var pluginInfoList = [];
 ipcMain.on("openProject", function (event, project) {
+  openProject(project, event);
+});
+function openProject(project, event) {
   if (mws.init(project)) {
     isRunning = true;
     event.sender.send("openProject");
@@ -133,7 +151,7 @@ ipcMain.on("openProject", function (event, project) {
     pluginInfoList = [];
     mws.events.on("loadedPlugins", function (mwsPlugins) {
       for (i in mwsPlugins) {
-        var pluginInfo = mwsPlugins[i].info
+        var pluginInfo = mwsPlugins[i].info;
         pluginInfoList.push(pluginInfo);
       }
       pluginInfoList.sort((a, b) => (a.loadPriority > b.loadPriority) ? 1 : -1)
@@ -143,4 +161,4 @@ ipcMain.on("openProject", function (event, project) {
     event.sender.send("openProjectFail");
     //todo make ui to check
   };
-});
+}

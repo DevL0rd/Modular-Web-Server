@@ -45,6 +45,8 @@
     </div>
     <div id="serverTools" style="display: none;">
       <div id="toolBoxLeft" class="customScroll rainbowScrollColor">
+        <button id="fullConsole-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
+          title="Console"><i class="fas fa-terminal"></i></button>
         <button id="browser-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
           title="Live View"><i class="fab fa-chrome"></i></button>
         <button id="stats-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
@@ -56,8 +58,12 @@
         <button id="console-btn" class="tool-bar-btns" data-toggle="tooltip" data-placement="right" data-html="true"
           title="Console"><i class="fas fa-terminal"></i></button>
       </div>
-      <iframe id="browser" src="http://localhost/" sandbox="allow-same-origin allow-scripts"
-        class="customScroll toolBoxApp"></iframe>
+      <div id="fullConsole" class="toolBoxApp">
+        <div id="fullConsoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
+        <input id="fullConsoleInput" type="text" placeholder="Console command"><br>
+      </div>
+      <iframe id="browser" src="" sandbox="allow-same-origin allow-scripts" class="customScroll toolBoxApp"
+        style="display: none;"></iframe>
       <div id="stats" class="toolBoxApp customScroll" style="display: none;">
 
         <div class="row" style="width: 100%;">
@@ -114,8 +120,6 @@
         </div>
       </div>
       <div id="plugins" class="toolBoxApp" style="display: none;">
-
-
         <div id="pluginList" class="customScroll rainbowScrollColor">
           <div id="pluginTab0" class="pluginTab" style="display: none;">
             <div class="pluginName"></div>
@@ -182,7 +186,7 @@
           </div>
         </div>
       </div>
-      <div id="console">
+      <div id="console" style="display: none;">
         <div id="consoleContainer" class="customScroll rainbowScrollColor rainbowSelection"></div>
         <input id="consoleInput" type="text" placeholder="Console command"><br>
       </div>

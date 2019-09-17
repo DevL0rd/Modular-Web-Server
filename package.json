@@ -1,7 +1,7 @@
 {
-  "name": "HackBox",
+  "name": "Modular-Web-Server",
   "version": "1.0.0",
-  "description": "A plethora of hack tools.",
+  "description": "The bestest webserver.",
   "main": "main.js",
   "scripts": {
     "start": "electron --enable-transparent-visuals --no-sandbox --disable-web-security ."

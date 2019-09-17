@@ -75,7 +75,6 @@ function formatStringNoColor(str, NameSpaceStr) {
 function log(str, isError = false, NameSpaceStr = NameSpace) {
     NameSpace = NameSpaceStr;
     setTimeout(function () {
-
         var colorStr = formatAndColorString(NameSpaceStr, str, isError);
         var formattedString = formatStringNoColor(str, NameSpaceStr);
         str = "" + str;
@@ -219,7 +218,6 @@ function loadProjectFile(projectPath) {
     exports.settings = settings;
 }
 
-//get command line args
 function init(projectPath = ".") {
     projectPath = slash(projectPath);
     if (!isDirEmpty(projectPath) && !fs.existsSync(projectPath + "/MWSProject.json")) {

@@ -84,10 +84,12 @@ var ipcRenderer = require('electron').ipcRenderer;
 var logTimeout
 ipcRenderer.on('log', function (event, genHtml) {
     $("#consoleContainer").append(genHtml);
+    $("#fullConsoleContainer").append(genHtml);
     $("#statusbartext").html("Console: " + genHtml);
     clearTimeout(logTimeout);
     logTimeout = setTimeout(function () {
         $("#consoleContainer").animate({ scrollTop: $('#consoleContainer').prop("scrollHeight") }, 300);
+        $("#fullConsoleContainer").animate({ scrollTop: $('#consoleContainer').prop("scrollHeight") }, 300);
     }, 300);
 });
 ipcRenderer.send('registerForHTMLLogging');
@@ -139,7 +141,12 @@ ipcRenderer.on('openProject', function (event, data) {
     $("#chooseproject").hide();
     $("#serverTools").fadeIn(400);
 });
-
+$("#fullConsole-btn").click(function () {
+    $(".toolBoxApp").hide();
+    $("#fullConsole").fadeIn(400);
+    $('#browser').attr('src', "");
+    $('#fullConsole-btn').tooltip('hide');
+});
 $("#browser-btn").click(function () {
     $(".toolBoxApp").hide();
     $("#browser").fadeIn(400);
@@ -164,7 +171,7 @@ $("#settings-btn").click(function () {
     $('#browser').attr('src', "");
     $('#settings-btn').tooltip('hide');
 });
-var consoleVisible = true;
+var consoleVisible = false;
 $("#console-btn").click(function () {
     $('#console-btn').tooltip('hide');
     if (consoleVisible) {
@@ -183,7 +190,13 @@ $('#consoleInput').keypress(function (e) {
         return false;    //<---- Add this line
     }
 });
-
+$('#fullConsoleInput').keypress(function (e) {
+    if (e.which == 13) {
+        ipcRenderer.send('consoleCommand', $('#fullConsoleInput').val());
+        $('#fullConsoleInput').val("");
+        return false;    //<---- Add this line
+    }
+});
 function loadPluginPage(id) {
     if (currentPlugin == id) return;
     currentPlugin = id;
