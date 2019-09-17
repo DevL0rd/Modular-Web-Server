@@ -636,14 +636,14 @@ function unloadPlugin(varName) {
     if (plugins[varName]) {
         var folder = plugins[varName].info.folder;
         var fullPath = plugins[varName].info.fullPath;
+        delete plugins[varName].info.folder;
+        delete plugins[varName].info.fullPath
+        plugins[varName].info.enabled = false; //Set to disabled
+        DB.save(folder + "\\MWSPlugin.json", plugins[varName].info); //Save change
         if (plugins[varName].exports.uninit) {
             plugins[varName].exports.uninit(events, io, log, commands);
             events.removeEvents(varName);
             if (deleteModule(fullPath)) {
-                delete plugins[varName].info.folder;
-                delete plugins[varName].info.fullPath
-                plugins[varName].info.enabled = false; //Set to disabled
-                DB.save(folder + "\\MWSPlugin.json", plugins[varName].info); //Save change
                 log("Plugin '" + varName + "' unloaded!", false, "Server")
                 delete plugins[varName];
                 reloadPluginExports();
