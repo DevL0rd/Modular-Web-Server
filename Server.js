@@ -12,6 +12,7 @@ const mkdirp = require('mkdirp');
 const slash = require('slash');
 const DB = require('./Devlord_modules/DB.js');
 const cc = require('./Devlord_modules/conColors.js');
+const cs = require('./Devlord_modules/conSplash.js');
 const readdirp = require('readdirp');
 var NameSpace = "HTTP";
 
@@ -241,7 +242,7 @@ function init(projectPath = ".") {
 
     server.timeout = settings.timeout;
     server.maxHeadersCount = settings.maxHeadersCount;
-    var io = require('socket.io')(server);
+    io = require('socket.io')(server);
     io.connectioncount = 0;
     io.clientcount = 0;
     io.generate_key = function () {
@@ -317,7 +318,7 @@ function init(projectPath = ".") {
                 for (var i in pLoadList) {
                     var plugin = pLoadList[i];
                     if (plugin.info.enabled) {
-                        log("Plugin '" + plugin.info.name + "' loaded.", false, "Server")
+                        log("Plugin '" + plugin.info.name + "' enabled.", false, "Server")
                         plugin.exports.init(pluginExports, settings, events, io, log, commands);
                         events.trigger("loadedPlugin", plugin);
                     } else {
@@ -392,14 +393,14 @@ function Http_Handler(request, response) {
         request.on('end', function () {
             log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "'", false, "HTTP");
             for (i in events["post"]) {
-                if (events["post"][i](request, response, urlParts, body)) {
+                if (events["post"][i].callback(request, response, urlParts, body)) {
                     break;
                 }
             }
         });
     } else if (request.method == 'GET') {
         for (i in events["get"]) {
-            if (events["get"][i](request, response, urlParts)) {
+            if (events["get"][i].callback(request, response, urlParts)) {
                 return;
             }
         }
@@ -602,17 +603,98 @@ process.stdin.on('data', function (line) {
         log("Unknown command '" + command + "'.", true, "CONSOLE")
     }
 });
+function reloadPluginExports() {
+    pluginExports = {};
+    for (var i in plugins) {
+        var plugin = plugins[i];
+        pluginExports[plugin.info.varName] = plugin.exports;
+    }
+}
+function loadPlugin(fullPath) {
+    var folder = fullPath.split("\\index.js")[0];
+    if (fs.existsSync(folder + "\\MWSPlugin.json")) {
+        var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
+        pluginInfo.enabled = true; //Set to enabled because not loaded by init
+        DB.save(folder + "\\MWSPlugin.json", pluginInfo); //Save change
+        pluginInfo["folder"] = folder;
+        pluginInfo["fullPath"] = fullPath;
+        if (!plugins[pluginInfo.varName]) {
+            plugins[pluginInfo.varName] = { info: pluginInfo, exports: require(fullPath) };
+            log("Plugin '" + pluginInfo.name + "' enabled.", false, "Server")
+            plugins[pluginInfo.varName].exports.init(pluginExports, settings, events, io, log, commands);
+            reloadPluginExports();
+            events.trigger("loadedPlugin", plugins[pluginInfo.varName]);
+        } else {
+            log("Plugin '" + folder + "' is using a varName (" + pluginInfo.varName + ") already taken by another plugin.", true, "Server")
+        }
 
+    } else {
+        log("Could not find MWSPlugin.json for plugin '" + folder + "'.", true, "Server")
+    }
+}
+function unloadPlugin(varName) {
+    if (plugins[varName]) {
+        var folder = plugins[varName].info.folder;
+        var fullPath = plugins[varName].info.fullPath;
+        if (plugins[varName].exports.uninit) {
+            plugins[varName].exports.uninit(events, io, log, commands);
+            events.removeEvents(varName);
+            if (deleteModule(fullPath)) {
+                delete plugins[varName].info.folder;
+                delete plugins[varName].info.fullPath
+                plugins[varName].info.enabled = false; //Set to disabled
+                DB.save(folder + "\\MWSPlugin.json", plugins[varName].info); //Save change
+                log("Plugin '" + varName + "' unloaded!", false, "Server")
+                delete plugins[varName];
+                reloadPluginExports();
+                return true;
+            } else {
+                log("Plugin '" + varName + "' could not be unloaded!", true, "Server");
+                return false;
+            };
+        } else {
+            log("Plugin '" + varName + "' does not support un-loading! You must restart the server to reload this plugin", true, "Server");
+        }
+    } else {
+        log("Could not unload '" + varName + "'. The plugin isn't loaded.", true, "Server")
+        return false;
+    }
+}
 
+function deleteModule(fullPath) {
+    var solvedName = require.resolve(fullPath),
+        nodeModule = require.cache[solvedName];
+    if (nodeModule) {
+        for (var i = 0; i < nodeModule.children.length; i++) {
+            var child = nodeModule.children[i];
+            deleteModule(child.filename);
+        }
+        delete require.cache[solvedName];
+        return true;
+    } else {
+        return false;
+    }
+}
+function reloadPlugin(pluginName) {
+    if (plugins[pluginName]) {
+        var pluginPath = plugins[pluginName].info.fullPath
+        if (unloadPlugin(pluginName)) {
+            loadPlugin(pluginPath);
+            log("Plugin reloaded! YOU MAY NEED TO RELOAD OTHER PLUGINS THAT USE THIS PLUGIN!!!!", false, "CONSOLE");
+        }
+    } else {
+        log("Plugin '" + pluginName + "' not found.", false, "CONSOLE");
+    }
+}
 var commands = {
     help: {
         usage: "help",
         help: "Displays this command list.",
         do: function (args, fullMessage) {
             for (command in commands) {
-                log(command + ":", false, "CONSOLE")
-                log("   " + commands[command].usage, false, "CONSOLE")
-                log("   " + commands[command].help, false, "CONSOLE")
+                log(command + ":", false, "CONSOLE");
+                log("   " + commands[command].usage, false, "CONSOLE");
+                log("   " + commands[command].help, false, "CONSOLE");
             }
         }
     },
@@ -654,6 +736,18 @@ var commands = {
             }
         }
     },
+    reload: {
+        usage: "reload <pluginName>",
+        help: "Reloads a plugin.",
+        do: function (args, fullMessage) {
+            if (!args || args.length != 2) {
+                var pluginName = args[0];
+                reloadPlugin(pluginName);
+            } else {
+                log("Usage: " + this.usage, false, "CONSOLE")
+            }
+        }
+    },
     exit: {
         usage: "exit",
         help: "Shuts the server down gracefully.",
@@ -673,27 +767,35 @@ var events = {
     "log": [],
     "loadedPlugin": [],
     "loadedPlugins": [],
-    "on": function (event, callback) {
-        if (this[event] && event != "trigger" && event != "on" && event != "addEvent") {
-            this[event].push(callback);
+    "on": function (event, callback, owner) {
+        if (!owner) owner = "Server"
+        if (this[event] && event != "trigger" && event != "on" && event != "addEvent" && event != "removeEvents") {
+            this[event].push({ callback: callback, owner: owner });
         } else {
             log("Event '" + event + "' is not found.", true, "Server");
         }
     },
     "addEvent": function (event) {
-        if (!this[event] && event != "trigger" && event != "on" && event != "addEvent") {
+        if (event != "trigger" && event != "on" && event != "addEvent" && event != "removeEvents") {
             this[event] = [];
-        } else {
-            log("Event '" + event + "' already exists.", true, "Server");
         }
     },
     "trigger": function (event, params = null) {
-        if (this[event] && event != "trigger" && event != "on" && event != "addEvent") {
+        if (this[event] && event != "trigger" && event != "on" && event != "addEvent" && event != "removeEvents") {
             for (i in this[event]) {
-                this[event][i](params);
+                this[event][i].callback(params);
             }
         } else {
             log("Event '" + event + "' is not found.", true, "Server");
+        }
+    },
+    "removeEvents": function (owner) {
+        for (event in events) {
+            for (i in events[event]) {
+                if (events[event][i].owner == owner) {
+                    events[event].splice(i, 1);
+                }
+            }
         }
     }
 };
@@ -707,3 +809,6 @@ exports.server = server;
 exports.io = io;
 exports.log = log;
 exports.commands = commands;
+exports.reloadPlugin = reloadPlugin;
+exports.unloadPlugin = unloadPlugin
+exports.loadPlugin = loadPlugin

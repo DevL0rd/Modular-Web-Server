@@ -216,6 +216,7 @@ function loadPluginPage(id) {
         $("#noSettings").fadeIn(400);
     }
     $("#pluginName").html(pluginList[id].name);
+    $("#reloadPluginBtn").attr("onclick", "ipcRenderer.send('reloadPlugin', pluginList[currentPlugin]);");
 
     if (fs.existsSync(pluginList[id].folder + "/pluginImage.png")) {
         $("#pluginImage").attr("src", pluginList[id].folder + "/pluginImage.png");
@@ -228,14 +229,15 @@ function togglePlugin(id) {
     var pluginInfo = pluginList[id];
     if (pluginInfo.enabled) {
         pluginInfo.enabled = false;
+        ipcRenderer.send('unloadPlugin', pluginInfo);
     } else {
         pluginInfo.enabled = true;
+        ipcRenderer.send('loadPlugin', pluginInfo);
     }
-    var cleanedPluginList = $.extend({}, pluginList);
-    for (i in cleanedPluginList) {
-        delete cleanedPluginList[i].pluginElement;
-    }
-    DB.save(pluginInfo.folder + "/MWSPlugin.json", pluginList[id])
+    // var cleanedPluginList = $.extend({}, pluginList);
+    // for (i in cleanedPluginList) {
+    //     delete cleanedPluginList[i].pluginElement;
+    // }
     if (!clientSettings.rainbowEnabled) {
         setAccentColor(clientSettings.accentColor.r, clientSettings.accentColor.g, clientSettings.accentColor.b, clientSettings.accentColor.a);
     }

@@ -388,29 +388,34 @@ textarea:focus, input:focus{
     margin-top: 8px;
 }
 
-  #settingsSearch {
-      background: black;
-      border: none;
-      border-radius: 25px;
-      color: white;
-      padding-left: 8px;
-      height: 40px;
-      width: calc(100% - 20px);
-      margin-top: 10px;
-      margin-left: 10px;
-      margin-bottom: 10px;
-  };
-
-  .dark-group-text {
-    background-color: rgba(40,40,0.75);
+#settingsSearch {
+    background: black;
+    border: none;
+    border-radius: 25px;
     color: white;
-  }
+    padding-left: 8px;
+    height: 40px;
+    width: calc(100% - 20px);
+    margin-top: 10px;
+    margin-left: 10px;
+    margin-bottom: 10px;
+};
 
-  
-    .validInput {
-        border: 3px solid green;
-    }
+.dark-group-text {
+background-color: rgba(40,40,0.75);
+color: white;
+}
 
-    .invalidInput {
-        border: 3px solid tomato;
-    }
+.validInput {
+    border: 3px solid green;
+}
+
+.invalidInput {
+    border: 3px solid tomato;
+}
+
+#reloadPluginBtn {
+    position: absolute;
+    top: 5px;
+    right: 5px;
+}

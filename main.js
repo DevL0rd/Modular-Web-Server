@@ -135,6 +135,15 @@ ipcMain.on("getPlugins", function (event) {
 ipcMain.on("getSettings", function (event) {
   event.sender.send("getSettings", mws.settings);
 });
+ipcMain.on("unloadPlugin", function (event, pluginInfo) {
+  mws.unloadPlugin(pluginInfo.varName);
+});
+ipcMain.on("loadPlugin", function (event, pluginInfo) {
+  mws.loadPlugin(pluginInfo.fullPath);
+});
+ipcMain.on("reloadPlugin", function (event, pluginInfo) {
+  mws.reloadPlugin(pluginInfo.varName);
+});
 
 var isRunning = false;
 
