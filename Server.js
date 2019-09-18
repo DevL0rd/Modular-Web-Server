@@ -614,6 +614,7 @@ function loadPlugin(fullPath) {
     var folder = fullPath.split("\\index.js")[0];
     if (fs.existsSync(folder + "\\MWSPlugin.json")) {
         var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
+        log("Plugin '" + pluginInfo.name + "' is loading....", false, "Server")
         pluginInfo.enabled = true; //Set to enabled because not loaded by init
         DB.save(folder + "\\MWSPlugin.json", pluginInfo); //Save change
         pluginInfo["folder"] = folder;
@@ -641,6 +642,7 @@ function unloadPlugin(varName) {
         plugins[varName].info.enabled = false; //Set to disabled
         DB.save(folder + "\\MWSPlugin.json", plugins[varName].info); //Save change
         if (plugins[varName].exports.uninit) {
+            log("Plugin '" + plugins[varName].info + "' is un-initializing....", false, "Server")
             plugins[varName].exports.uninit(events, io, log, commands);
             events.removeEvents(varName);
             if (deleteModule(fullPath)) {
