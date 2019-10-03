@@ -6,6 +6,7 @@ const url = require('url');
 const fs = require('fs');
 const http = require('http');
 const crypto = require('crypto');
+var bcrypt = require("bcryptjs");
 const mime = require('mime-types')
 const Throttle = require('throttle');
 const mkdirp = require('mkdirp');
@@ -15,7 +16,6 @@ const cc = require('./Devlord_modules/conColors.js');
 const cs = require('./Devlord_modules/conSplash.js');
 const readdirp = require('readdirp');
 var NameSpace = "HTTP";
-
 //
 //Include DevLord Libs.
 //
@@ -51,11 +51,6 @@ function timeStamp() {
     return date.join("/") + " " + time.join(":") + " " + suffix;
 }
 
-function isEven(n) {
-    n = Number(n);
-    return n === 0 || !!(n && !(n % 2));
-}
-
 String.prototype.replaceAll = function (search, replacement) {
     var target = this;
     return target.split(search).join(replacement);
@@ -75,47 +70,48 @@ function formatStringNoColor(str, NameSpaceStr) {
 }
 function log(str, isError = false, NameSpaceStr = NameSpace) {
     NameSpace = NameSpaceStr;
-    setTimeout(function () {
-        var colorStr = formatAndColorString(NameSpaceStr, str, isError);
-        var formattedString = formatStringNoColor(str, NameSpaceStr);
-        str = "" + str;
-        if (isError) {
-            if (settings.logging.printErrors && !settings.logging.errorNamespacePrintFilter.includes(NameSpaceStr)) {
-                console.log(colorStr);
-                events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
-            }
-        } else {
-            if (settings.logging.printConsole && !settings.logging.consoleNamespacePrintFilter.includes(NameSpaceStr)) {
-                console.log(colorStr);
-                events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
-            }
+    var colorStr = formatAndColorString(NameSpaceStr, str, isError);
+    var formattedString = formatStringNoColor(str, NameSpaceStr);
+    str = "" + str;
+    if (isError) {
+        if (settings.logging.printErrors && !settings.logging.errorNamespacePrintFilter.includes(NameSpaceStr)) {
+            console.log(colorStr);
+            events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
         }
+    } else {
+        if (settings.logging.printConsole && !settings.logging.consoleNamespacePrintFilter.includes(NameSpaceStr)) {
+            console.log(colorStr);
+            events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
+        }
+    }
 
-        if (settings.logging.enabled) {
-            var now = new Date();
-            var date = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
-            var TodaysDate = date.join("-");
-            if (settings.logging.consoleLoggingEnabled) {
-                fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
-                fs.appendFile(settings.logging.directory + "/" + "C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
-            }
-            if (settings.logging.errorLoggingEnabled) {
-                fs.appendFile(settings.logging.directory + "/" + "E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
-                fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
-            }
+    if (settings.logging.enabled) {
+        var now = new Date();
+        var date = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
+        var TodaysDate = date.join("-");
+        if (settings.logging.consoleLoggingEnabled) {
+            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+            fs.appendFile(settings.logging.directory + "/" + "C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
         }
-    }, 0);
+        if (settings.logging.errorLoggingEnabled) {
+            fs.appendFile(settings.logging.directory + "/" + "E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+        }
+    }
 }
 
 var plugins = {};
 var pluginExports = {};
 var server;
+var wserver;
 var io;
+var dio;
+var wio;
+var wsocket;
 var settings;
 var routes;
 var redirects;
 var ipBans;
-
 function isDirEmpty(dirStr) {
     fs.readdirSync(dirStr, function (err, files) {
         if (err) {
@@ -129,7 +125,9 @@ function isDirEmpty(dirStr) {
         }
     });
 }
-function loadProjectFile(projectPath) {
+var projectPath;
+function loadProjectFile(nProjectPath) {
+    projectPath = nProjectPath;
     if (fs.existsSync(projectPath + "/MWSProject.json")) {
         settings = DB.load(projectPath + "/MWSProject.json")
     } else {
@@ -138,6 +136,7 @@ function loadProjectFile(projectPath) {
             Author: "",
             IP: "0.0.0.0",
             PORT: 80,
+            workerPORT: 8080,
             timeout: 5000,
             maxHeadersCount: 20,
             maxPostSizeMB: 8,
@@ -165,7 +164,8 @@ function loadProjectFile(projectPath) {
                 blockedPaths: [],
                 blockedFiles: [],
                 blockedFileNames: [],
-                blockedFileExtensions: []
+                blockedFileExtensions: [],
+                workerPassword: ""
             },
             logging: {
                 enabled: true,
@@ -178,7 +178,12 @@ function loadProjectFile(projectPath) {
                 errorNamespacePrintFilter: []
             }
         }
-        DB.save(projectPath + "/MWSProject.json", settings)
+        DB.save(projectPath + "/MWSProject.json", settings);
+        bcrypt.hash("password ", 8, function (err, hash) {
+            if (err) return;
+            settings.security.workerPassword = hash;
+            DB.save(projectPath + "/MWSProject.json", settings);
+        });
     }
     mkdirp(settings.webRoot, function (err) {
         if (err) throw err;
@@ -218,14 +223,150 @@ function loadProjectFile(projectPath) {
     //re-export settings
     exports.settings = settings;
 }
-
-function init(projectPath = ".") {
+function getRandomInt(min, max) {
+    min = Math.ceil(min);
+    max = Math.floor(max);
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+var workerIo = { isWorker: false, queueJob: queueJob, workerCount: 0, jobs: {}, doDistributedJob: doDistributedJob }
+function queueJob(jobName, data, callback, trackerId = 0) {
+    var dsockets = dio.sockets.sockets;
+    var d = new Date();
+    var t = d.getTime() + getRandomInt(1, 999999999);
+    var job = { jobId: t, jobName: jobName, data: data, trackerId: trackerId };
+    for (var socketId in dsockets) {
+        var ds = dsockets[socketId];
+        if (ds.isLoggedIn && !ds.isWorking) {
+            ds.isWorking = true;
+            ds.emit("doJob", job);
+            break;
+        }
+    }
+    workerIo.jobs[t] = { jobId: t, jobName: jobName, callback: callback, trackerId: trackerId, currentJob: false };
+    return t;
+}
+var jobGroupTracker = {}
+function doDistributedJob(jobName, data, callback) { //test when home
+    var d = new Date();
+    var t = d.getTime() + getRandomInt(1, 999999999);;
+    var jobDatas = chunkArray(data, workerIo.workerCount);
+    jobGroupTracker[t] = { callback: callback, jobIds: {}, results: [] };
+    for (i in jobDatas) {
+        var jobData = jobDatas[i];
+        jobGroupTracker[t].jobIds[queueJob(jobName, jobData, trackJobProgress, t)] = true; //just store the jobs id in and delete when completed job.
+    }
+}
+function trackJobProgress(data) {
+    jobGroupTracker[data.trackerId].results.push(data.result);
+    delete jobGroupTracker[data.trackerId].jobIds[data.jobId];
+    if (!(Object.keys(jobGroupTracker[data.trackerId].jobIds).length)) {
+        jobGroupTracker[data.trackerId].callback(jobGroupTracker[data.trackerId].results);
+        delete jobGroupTracker[data.trackerId];
+    }
+}
+function chunkArray(arr, chunkCount, balanced = true) {
+    if (chunkCount < 2)
+        return [arr];
+    var len = arr.length,
+        out = [],
+        i = 0,
+        size;
+    if (len % chunkCount === 0) {
+        size = Math.floor(len / chunkCount);
+        while (i < len) {
+            out.push(arr.slice(i, i += size));
+        }
+    } else if (balanced) {
+        while (i < len) {
+            size = Math.ceil((len - i) / chunkCount--);
+            out.push(arr.slice(i, i += size));
+        }
+    } else {
+        n--;
+        size = Math.floor(len / chunkCount);
+        if (len % size === 0)
+            size--;
+        while (i < size * chunkCount) {
+            out.push(arr.slice(i, i += size));
+        }
+        out.push(arr.slice(size * chunkCount));
+    }
+    return out;
+}
+function init(projectPath = ".", workerParams = {}) {
+    loadProjectFile(projectPath);
+    settings.projectPath = projectPath; //read only check of path
     projectPath = slash(projectPath);
     if (!isDirEmpty(projectPath) && !fs.existsSync(projectPath + "/MWSProject.json")) {
         return false;
     }
-    loadProjectFile(projectPath);
-    settings.projectPath = projectPath; //read only check of path
+    workerIo.isWorker = (Object.keys(workerParams).length);
+    if (workerIo.isWorker) {
+        log("Starting server as worker...", false, "Server");
+        wio = require('socket.io-client');
+        wsocket = wio("http://" + workerParams.mainServerIp + ":" + settings.workerPORT, {
+            reconnect: true
+        });
+        wsocket.on("connect", function () {
+            log("Worker connected to main server. Authenticating...", false, "Server");
+            wsocket.emit("authenticate", workerParams.password)
+        });
+        wsocket.on("loginResponse", function (isLogged) {
+            if (isLogged) {
+                log("Worker authenticated.", false, "Server");
+            } else {
+                log("Worker failed to authenticate. Password incorrect.", true, "Server");
+            }
+        });
+        wsocket.on("doJob", function (job) {
+            wsocket.emit("doJobConfirm");
+            job.wsocket = wsocket;
+            job.complete = function (result) {
+                this.wsocket.emit("completeJob", { result: result, jobId: this.jobId, trackerId: this.trackerId })
+            };
+            events.trigger("doJob", job);
+        });
+        wsocket.on("disconnect", function () {
+            log("Worker disconnected from main server.", false, "Server");
+        });
+    } else {
+        log("Starting master server...", false, "Server");
+        //start websocket for distributed networking
+        wserver = http.createServer(function (request, response) {
+            //handle requests later for transfering updated webroot, plugin, and config files
+        });
+        dio = require('socket.io')(wserver);
+        wserver.listen(settings.workerPORT, settings.IP);
+        dio.on("connection", function (ws) {
+            ws.isWorking = false;
+            log("Worker connected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+            ws.on("authenticate", function (pass) {
+                ws.isWorking = false;
+                bcrypt.compare(pass, settings.security.workerPassword, function (err, passMatches) {
+                    if (err) return;
+                    if (passMatches) {
+                        workerIo.workerCount++;
+                        ws.isLoggedIn = true;
+                        log("Worker authenticated succesfully. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+                        ws.emit("loginResponse", true);
+                    } else {
+                        log("Worker used incorrect password. [" + ws.request.connection.remoteAddress + "]", true, "Server");
+                        ws.emit("loginResponse", false);
+                        ws.disconnect();
+                    }
+                });
+            });
+            ws.on("completeJob", function (data) {
+                ws.isWorking = false;
+                workerIo.jobs[data.jobId].callback(data);
+                delete workerIo.jobs[data.jobId]; //cleanup job
+            });
+        });
+        dio.on("disconnect", function (ws) {
+            if (ws.isLoggedIn) workerIo.workerCount--;
+            log("Worker disconnected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+        });
+    }
     server = http.createServer(function (request, response) {
         setTimeout(function () {
             try {
@@ -238,7 +379,7 @@ function init(projectPath = ".") {
                 }
             }
         }, 0)
-    })
+    });
 
     server.timeout = settings.timeout;
     server.maxHeadersCount = settings.maxHeadersCount;
@@ -275,15 +416,8 @@ function init(projectPath = ".") {
         });
     })
 
-    server.on('error', function (err) {
-        log(err, true, "Server");
-    });
-
-    server.on('uncaughtException', function (err) {
-        log(err, true, "Server");
-    });
     if (settings.pluginsPath && settings.pluginsPath != "") {
-        log("Loading plugins...", false, "Server")
+        log("Loading plugins...", false, "Server");
         plugins = {};
         readdirp(settings.pluginsPath, {
             type: 'files',
@@ -318,11 +452,21 @@ function init(projectPath = ".") {
                 for (var i in pLoadList) {
                     var plugin = pLoadList[i];
                     if (plugin.info.enabled) {
-                        log("Plugin '" + plugin.info.name + "' enabled.", false, "Server")
-                        plugin.exports.init(pluginExports, settings, events, io, log, commands);
-                        events.trigger("loadedPlugin", plugin);
+                        if (workerIo.isWorker) {
+                            if (plugin.info.loadWhenInWorkerMode) {
+                                log("Plugin '" + plugin.info.name + "' enabled.", false, "Server");
+                                plugin.exports.init(pluginExports, settings, events, io, log, commands, workerIo);
+                                events.trigger("loadedPlugin", plugin);
+                            } else {
+                                log("Plugin '" + plugin.info.name + "' is disabled in worker mode.", false, "Server");
+                            }
+                        } else {
+                            log("Plugin '" + plugin.info.name + "' enabled.", false, "Server");
+                            plugin.exports.init(pluginExports, settings, events, io, log, commands, workerIo);
+                            events.trigger("loadedPlugin", plugin);
+                        }
                     } else {
-                        log("Plugin '" + plugin.info.name + "' is disabled and not loaded.", false, "Server")
+                        log("Plugin '" + plugin.info.name + "' is disabled and not loaded.", false, "Server");
                     }
                 }
                 events.trigger("loadedPlugins", plugins);
@@ -332,7 +476,13 @@ function init(projectPath = ".") {
     }
     if (settings.webRoot && settings.webRoot != "") {
         log("Starting HTTP server at '" + settings.IP + ":" + settings.PORT + "'...", false, "HTTP");
-        server.listen(settings.PORT, settings.IP);
+        try {
+            if (!workerIo.isWorker) { //remove when testing from seperate machines
+                server.listen(settings.PORT, settings.IP);
+            }
+        } catch (err) {
+
+        }
     } else {
         log("ERROR: Please set webroot in 'MWSProject.json'", true, "Server");
         return false;
@@ -622,7 +772,7 @@ function loadPlugin(fullPath) {
         if (!plugins[pluginInfo.varName]) {
             plugins[pluginInfo.varName] = { info: pluginInfo, exports: require(fullPath) };
             log("Plugin '" + pluginInfo.name + "' enabled.", false, "Server")
-            plugins[pluginInfo.varName].exports.init(pluginExports, settings, events, io, log, commands);
+            plugins[pluginInfo.varName].exports.init(pluginExports, settings, events, io, log, commands, workerIo);
             reloadPluginExports();
             events.trigger("loadedPlugin", plugins[pluginInfo.varName]);
         } else {
@@ -750,6 +900,23 @@ var commands = {
             }
         }
     },
+    setwp: {
+        usage: "setwp <password>",
+        help: "Sets the password for distributed networking clients.",
+        do: function (args, fullMessage) {
+            if (!args || args.length != 2) {
+                var pass = args[0];
+                bcrypt.hash(pass, 8, function (err, hash) {
+                    if (err) return;
+                    settings.security.workerPassword = hash;
+                    DB.save(projectPath + "/MWSProject.json", settings);
+                    log("Distributed Networking Worker password set!", false, "CONSOLE");
+                });
+            } else {
+                log("Usage: " + this.usage, false, "CONSOLE");
+            }
+        }
+    },
     exit: {
         usage: "exit",
         help: "Shuts the server down gracefully.",
@@ -769,6 +936,7 @@ var events = {
     "log": [],
     "loadedPlugin": [],
     "loadedPlugins": [],
+    "doJob": [],
     "on": function (event, callback, owner) {
         if (!owner) owner = "Server"
         if (this[event] && event != "trigger" && event != "on" && event != "addEvent" && event != "removeEvents") {

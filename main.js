@@ -12,10 +12,17 @@ const { app, BrowserWindow, ipcMain } = require('electron')
 let mainWindow
 var args = process.argv.slice(5);
 var usingUI = true;
+var mainServerIp = false;
 if (args.length > 1) {
-  if (args.includes("noui")) {
-
-    if (mws.init(args[0])) {
+  var workerParams = {};
+  if (args.includes("worker")) {
+    mainServerIp = args[args.indexOf("worker") + 1];
+    if (mainServerIp) {
+      workerParams = { mainServerIp: mainServerIp, password: args[args.indexOf("worker") + 2], isWorker: true };
+    }
+  }
+  if (args.includes("noui") || args.includes("worker")) {
+    if (mws.init(args[0], workerParams)) {
       usingUI = false;
     }
   }
@@ -152,7 +159,7 @@ ipcMain.on("openProject", function (event, project) {
   openProject(project, event);
 });
 function openProject(project, event) {
-  if (mws.init(project)) {
+  if (mws.init(project)) { //if main server ip is not null or false then it will run as a worker server
     isRunning = true;
     event.sender.send("openProject");
     addRecent({ name: mws.settings.Name, author: mws.settings.Author, path: mws.settings.projectPath });
@@ -164,7 +171,7 @@ function openProject(project, event) {
       }
       pluginInfoList.sort((a, b) => (a.loadPriority > b.loadPriority) ? 1 : -1)
       event.sender.send("getPlugins", pluginInfoList);
-    })
+    });
   } else {
     event.sender.send("openProjectFail");
     //todo make ui to check
