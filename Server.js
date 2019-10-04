@@ -88,12 +88,12 @@ function log(str, isError = false, NameSpaceStr = NameSpace) {
         var date = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
         var TodaysDate = date.join("-");
         if (settings.logging.consoleLoggingEnabled) {
-            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_C-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
-            fs.appendFile(settings.logging.directory + "/" + "C-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
+            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_C-Out_" + TodaysDate + ".txt", formattedString, function (err) { if (err) log(err.message + ".\n" + err.stack, true, "Logging"); });
+            fs.appendFile(settings.logging.directory + "/" + "C-Out_" + TodaysDate + ".txt", formattedString, function (err) { if (err) log(err.message + ".\n" + err.stack, true, "Logging"); });
         }
         if (settings.logging.errorLoggingEnabled) {
-            fs.appendFile(settings.logging.directory + "/" + "E-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
-            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_E-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
+            fs.appendFile(settings.logging.directory + "/" + "E-Out_" + TodaysDate + ".txt", formattedString, function (err) { if (err) log(err.message + ".\n" + err.stack, true, "Logging"); });
+            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_E-Out_" + TodaysDate + ".txt", formattedString, function (err) { if (err) log(err.message + ".\n" + err.stack, true, "Logging"); });
         }
     }
 }
