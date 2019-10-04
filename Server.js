@@ -230,30 +230,47 @@ function getRandomInt(min, max) {
 }
 var workerIo = { isWorker: false, queueJob: queueJob, workerCount: 0, jobs: {}, doDistributedJob: doDistributedJob }
 function queueJob(jobName, data, callback, trackerId = 0) {
-    var dsockets = dio.sockets.sockets;
     var d = new Date();
-    var t = d.getTime() + getRandomInt(1, 999999999);
-    var job = { jobId: t, jobName: jobName, data: data, trackerId: trackerId };
-    for (var socketId in dsockets) {
-        var ds = dsockets[socketId];
-        if (ds.isLoggedIn && !ds.isWorking) {
-            ds.isWorking = true;
-            ds.emit("doJob", job);
-            break;
+    var jobId = d.getTime() + getRandomInt(1, 999999999);
+    workerIo.jobs[jobId] = { jobId: jobId, jobName: jobName, data: data, callback: callback, trackerId: trackerId, jobTaken: false, currentJob: false };
+    giveJobToAvailableWorker(workerIo.jobs[jobId]);
+    return jobId;
+}
+function giveAvailableJob(workerSocket) {
+    for (jobId in workerIo.jobs) {
+        var job = workerIo.jobs[jobId]
+        if (!job.jobTaken) {
+            giveJobToWorker(workerSocket, job);
+            return true;
         }
     }
-    workerIo.jobs[t] = { jobId: t, jobName: jobName, callback: callback, trackerId: trackerId, currentJob: false };
-    return t;
+    return false;
+}
+function giveJobToAvailableWorker(job) {
+    var dsockets = dio.sockets.sockets;
+    for (var socketId in dsockets) {
+        var workerSocket = dsockets[socketId];
+        if (workerSocket.isLoggedIn && !workerSocket.jobId) {
+            giveJobToWorker(workerSocket, job);
+            return true;
+        }
+    }
+    return false;
+}
+function giveJobToWorker(workerSocket, job) {
+    workerSocket.jobId = job.jobId;
+    workerSocket.emit("doJob", job);
+    workerIo.jobs[job.jobId].jobTaken = true;
 }
 var jobGroupTracker = {}
 function doDistributedJob(jobName, data, callback) { //test when home
     var d = new Date();
-    var t = d.getTime() + getRandomInt(1, 999999999);;
+    var trackerId = d.getTime() + getRandomInt(1, 999999999);;
     var jobDatas = chunkArray(data, workerIo.workerCount);
-    jobGroupTracker[t] = { callback: callback, jobIds: {}, results: [] };
+    jobGroupTracker[trackerId] = { callback: callback, jobIds: {}, results: [] };
     for (i in jobDatas) {
         var jobData = jobDatas[i];
-        jobGroupTracker[t].jobIds[queueJob(jobName, jobData, trackJobProgress, t)] = true; //just store the jobs id in and delete when completed job.
+        jobGroupTracker[trackerId].jobIds[queueJob(jobName, jobData, trackJobProgress, trackerId)] = true; //just store the jobs id in and delete when completed job.
     }
 }
 function trackJobProgress(data) {
@@ -327,6 +344,7 @@ function init(projectPath = ".", workerParams = {}) {
             events.trigger("doJob", job);
         });
         wsocket.on("disconnect", function () {
+            wsocket.jobId;
             log("Worker disconnected from main server.", false, "Server");
         });
     } else {
@@ -338,17 +356,18 @@ function init(projectPath = ".", workerParams = {}) {
         dio = require('socket.io')(wserver);
         wserver.listen(settings.workerPORT, settings.IP);
         dio.on("connection", function (ws) {
-            ws.isWorking = false;
+            ws.jobId = 0;
             log("Worker connected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
             ws.on("authenticate", function (pass) {
-                ws.isWorking = false;
+                ws.jobId = 0;
                 bcrypt.compare(pass, settings.security.workerPassword, function (err, passMatches) {
                     if (err) return;
                     if (passMatches) {
+                        log("Worker authenticated succesfully. [" + ws.request.connection.remoteAddress + "]", false, "Server");
                         workerIo.workerCount++;
                         ws.isLoggedIn = true;
-                        log("Worker authenticated succesfully. [" + ws.request.connection.remoteAddress + "]", false, "Server");
                         ws.emit("loginResponse", true);
+                        giveAvailableJob(ws); //start working
                     } else {
                         log("Worker used incorrect password. [" + ws.request.connection.remoteAddress + "]", true, "Server");
                         ws.emit("loginResponse", false);
@@ -357,14 +376,19 @@ function init(projectPath = ".", workerParams = {}) {
                 });
             });
             ws.on("completeJob", function (data) {
-                ws.isWorking = false;
+                ws.jobId = 0;
                 workerIo.jobs[data.jobId].callback(data);
                 delete workerIo.jobs[data.jobId]; //cleanup job
+                giveAvailableJob(ws); //get new job if available
             });
-        });
-        dio.on("disconnect", function (ws) {
-            if (ws.isLoggedIn) workerIo.workerCount--;
-            log("Worker disconnected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+            ws.on("disconnect", function () {
+                log("Worker disconnected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+                if (ws.isLoggedIn) workerIo.workerCount--;
+                ws.isLoggedIn = false; //prevent trying to assign the job back to the same socket
+                if (ws.jobId && workerIo.jobs[ws.jobId]) {
+                    giveJobToAvailableWorker(workerIo.jobs[ws.jobId]);
+                }
+            });
         });
     }
     server = http.createServer(function (request, response) {
