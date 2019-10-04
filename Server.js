@@ -56,12 +56,10 @@ String.prototype.replaceAll = function (search, replacement) {
     return target.split(search).join(replacement);
 };
 
-function formatAndColorString(NameSpaceStr, str, isError) {
+function formatAndColorString(NameSpaceStr, str) {
     var formattedPrefixColored = cc.style.bright + cc.fg.white + "[" + cc.fg.blue + timeStamp() + cc.fg.white + "] (" + cc.fg.magenta + NameSpaceStr + cc.fg.white + "): ";
-    var loggedStrColor = cc.fg.white;
-    if (isError) loggedStrColor = cc.fg.red;
-    var cstringColoredQuotes = str.replace(/\'.*\'/, cc.style.underscore + cc.fg.cyan + '$&' + cc.reset + cc.style.bright + loggedStrColor);
-    return formattedPrefixColored + loggedStrColor + cstringColoredQuotes + cc.reset + cc.fg.white;
+    var cstringColoredQuotes = str.replace(/\'.*\'/, cc.style.underscore + cc.fg.cyan + '$&' + cc.reset + cc.style.bright + cc.fg.white);
+    return formattedPrefixColored + cc.fg.white + cstringColoredQuotes + cc.reset + cc.fg.white;
 }
 
 function formatStringNoColor(str, NameSpaceStr) {
@@ -70,18 +68,18 @@ function formatStringNoColor(str, NameSpaceStr) {
 }
 function log(str, isError = false, NameSpaceStr = NameSpace) {
     NameSpace = NameSpaceStr;
-    var colorStr = formatAndColorString(NameSpaceStr, str, isError);
+    var colorStr = formatAndColorString(NameSpaceStr, str);
     var formattedString = formatStringNoColor(str, NameSpaceStr);
     str = "" + str;
     if (isError) {
         if (settings.logging.printErrors && !settings.logging.errorNamespacePrintFilter.includes(NameSpaceStr)) {
-            console.log(colorStr);
-            events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
+            console.error(colorStr);
+            events.trigger("log", { isError: isError, NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
         }
     } else {
         if (settings.logging.printConsole && !settings.logging.consoleNamespacePrintFilter.includes(NameSpaceStr)) {
             console.log(colorStr);
-            events.trigger("log", { NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
+            events.trigger("log", { isError: isError, NameSpaceStr: NameSpaceStr, formattedString: formattedString, colorStr: colorStr });
         }
     }
 
@@ -90,12 +88,12 @@ function log(str, isError = false, NameSpaceStr = NameSpace) {
         var date = [now.getMonth() + 1, now.getDate(), now.getFullYear()];
         var TodaysDate = date.join("-");
         if (settings.logging.consoleLoggingEnabled) {
-            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
-            fs.appendFile(settings.logging.directory + "/" + "C-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_C-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
+            fs.appendFile(settings.logging.directory + "/" + "C-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
         }
         if (settings.logging.errorLoggingEnabled) {
-            fs.appendFile(settings.logging.directory + "/" + "E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
-            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_E-Out_" + TodaysDate + ".txt", formattedString, function (err) { });
+            fs.appendFile(settings.logging.directory + "/" + "E-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
+            fs.appendFile(settings.logging.directory + "/" + NameSpaceStr + "_E-Out_" + TodaysDate + ".txt", formattedString, function (err) { log(err.message + ".\n" + err.stack, true, "Logging"); });
         }
     }
 }
@@ -180,19 +178,28 @@ function loadProjectFile(nProjectPath) {
         }
         DB.save(projectPath + "/MWSProject.json", settings);
         bcrypt.hash("password ", 8, function (err, hash) {
-            if (err) return;
+            if (err) {
+                log(err.message + ".\n" + err.stack, true, "bCrypt");
+                return;
+            }
             settings.security.workerPassword = hash;
             DB.save(projectPath + "/MWSProject.json", settings);
         });
     }
     mkdirp(settings.webRoot, function (err) {
-        if (err) throw err;
+        if (err) {
+            log(err.message + ".\n" + err.stack, true, "mkdirp");
+        };
     });
     mkdirp(settings.pluginsPath, function (err) {
-        if (err) throw err;
+        if (err) {
+            log(err.message + ".\n" + err.stack, true, "mkdirp");
+        };
     });
     mkdirp(settings.logging.directory, function (err) {
-        if (err) throw err;
+        if (err) {
+            log(err.message + ".\n" + err.stack, true, "mkdirp");
+        };
     });
     if (fs.existsSync(projectPath + "/routes.json")) {
         routes = DB.load(projectPath + "/routes.json");
@@ -354,14 +361,31 @@ function init(projectPath = ".", workerParams = {}) {
             //handle requests later for transfering updated webroot, plugin, and config files
         });
         dio = require('socket.io')(wserver);
+        dio.on('error', function (err) {
+            // Handle your error here
+            log(err.message + ".\n" + err.stack, true, "IO");
+        });
+        dio.on('uncaughtException', function (err) {
+            log(err.message + ".\n" + err.stack, true, "IO");
+        });
         wserver.listen(settings.workerPORT, settings.IP);
+        wserver.on('error', function (err) {
+            // Handle your error here
+            log(err.message + ".\n" + err.stack, true, "Server");
+        });
+        wserver.on('uncaughtException', function (err) {
+            log(err.message + ".\n" + err.stack, true, "Server");
+        });
         dio.on("connection", function (ws) {
             ws.jobId = 0;
             log("Worker connected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
             ws.on("authenticate", function (pass) {
                 ws.jobId = 0;
                 bcrypt.compare(pass, settings.security.workerPassword, function (err, passMatches) {
-                    if (err) return;
+                    if (err) {
+                        log(err.message + ".\n" + err.stack, true, "bCrypt");
+                        return;
+                    };
                     if (passMatches) {
                         log("Worker authenticated succesfully. [" + ws.request.connection.remoteAddress + "]", false, "Server");
                         workerIo.workerCount++;
@@ -375,6 +399,7 @@ function init(projectPath = ".", workerParams = {}) {
                     }
                 });
             });
+
             ws.on("completeJob", function (data) {
                 ws.jobId = 0;
                 workerIo.jobs[data.jobId].callback(data);
@@ -404,9 +429,15 @@ function init(projectPath = ".", workerParams = {}) {
                     log("'" + request.url + "' " + err.message + ".\n" + err.stack, true, "HTTP");
                 }
             }
-        }, 0)
+        }, 0);
     });
-
+    server.on('error', function (err) {
+        // Handle your error here
+        log(err.message + ".\n" + err.stack, true, "Server");
+    });
+    server.on('uncaughtException', function (err) {
+        log(err.message + ".\n" + err.stack, true, "Server");
+    });
     server.timeout = settings.timeout;
     server.maxHeadersCount = settings.maxHeadersCount;
     io = require('socket.io')(server);
@@ -418,10 +449,10 @@ function init(projectPath = ".", workerParams = {}) {
         return sha.digest('hex');
     }
     io.on('error', function (err) {
-        log("ERROR: " + err, true, "IO");
+        log(err.message + ".\n" + err.stack, true, "IO");
     });
     io.on('uncaughtException', function (err) {
-        log("ERROR: " + err, true, "IO");
+        log(err.message + ".\n" + err.stack, true, "IO");
     });
     io.on('connection', function (socket) {
         if (ipBans[socket.request.connection.remoteAddress]) {
@@ -502,12 +533,8 @@ function init(projectPath = ".", workerParams = {}) {
     }
     if (settings.webRoot && settings.webRoot != "") {
         log("Starting HTTP server at '" + settings.IP + ":" + settings.PORT + "'...", false, "HTTP");
-        try {
-            if (!workerIo.isWorker) { //remove when testing from seperate machines
-                server.listen(settings.PORT, settings.IP);
-            }
-        } catch (err) {
-
+        if (!workerIo.isWorker) {
+            server.listen(settings.PORT, settings.IP);
         }
     } else {
         log("ERROR: Please set webroot in 'MWSProject.json'", true, "Server");
@@ -666,24 +693,29 @@ function Http_Handler(request, response) {
 function sendFile(reqPath, request, response, callback) {
     var fullPath = settings.webRoot + reqPath;
     fs.stat(fullPath, function (err, stat) {
-        var reqModDate = request.headers["if-modified-since"];
-        //remove milliseconds from modified date, some browsers do not keep the date that accurately.
-        if (reqModDate && Math.floor(new Date(reqModDate).getTime() / 1000) == Math.floor(stat.mtime.getTime() / 1000)) {
-            response.writeHead(304, {
-                "Last-Modified": stat.mtime.toUTCString()
-            });
-            response.end();
-            callback(true);
+        if (!err) {
+            var reqModDate = request.headers["if-modified-since"];
+            //remove milliseconds from modified date, some browsers do not keep the date that accurately.
+            if (reqModDate && Math.floor(new Date(reqModDate).getTime() / 1000) == Math.floor(stat.mtime.getTime() / 1000)) {
+                response.writeHead(304, {
+                    "Last-Modified": stat.mtime.toUTCString()
+                });
+                response.end();
+                callback(true);
+            } else {
+                var mimeType = getMime(reqPath);
+                var header = buildHeader(mimeType, stat);
+                response.writeHead(200, header);
+                var fileStream = fs.createReadStream(fullPath);
+                pipeFileToResponse(fileStream, mimeType, response);
+                callback(false);
+                fileStream.on('end', () => {
+                });
+            }
         } else {
-            var mimeType = getMime(reqPath);
-            var header = buildHeader(mimeType, stat);
-            response.writeHead(200, header);
-            var fileStream = fs.createReadStream(fullPath);
-            pipeFileToResponse(fileStream, mimeType, response);
-            callback(false);
-            fileStream.on('end', () => {
-            });
+            log(err.message + ".\n" + err.stack, true, "HTTP");
         }
+
     });
 }
 
@@ -703,40 +735,44 @@ function buildHeader(mimeType = "application/octet-stream", stat, otherOptions =
 function sendByteRange(reqPath, request, response, callback) {
     var fullPath = settings.webRoot + reqPath;
     fs.stat(fullPath, function (err, stat) {
-        var total = stat.size;
-        var range = request.headers.range;
-        var parts = range.replace(/bytes=/, "").split("-");
-        var partialstart = parts[0];
-        var partialend = parts[1];
-        var start = parseInt(partialstart, 10);
-        var end = partialend ? parseInt(partialend, 10) : total - 1;
-        start = isNaN(start) ? 0 : start
-        var chunksize = (end - start);
-        if (start >= 0 && start <= end && end <= total - 1) {
-            var mimeType = getMime(reqPath);
-            var header = buildHeader(mimeType, stat, {
-                'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
-                'Content-Length': start == end ? 0 : (end - start + 1),
-                'Accept-Ranges': 'bytes'
-            });
-            response.writeHead(206, header);
-            var fileStream = fs.createReadStream(fullPath, {
-                start: start,
-                end: end
-            });
-            pipeFileToResponse(fileStream, mimeType, response);
+        if (!err) {
+            var total = stat.size;
+            var range = request.headers.range;
+            var parts = range.replace(/bytes=/, "").split("-");
+            var partialstart = parts[0];
+            var partialend = parts[1];
+            var start = parseInt(partialstart, 10);
+            var end = partialend ? parseInt(partialend, 10) : total - 1;
+            start = isNaN(start) ? 0 : start
+            var chunksize = (end - start);
+            if (start >= 0 && start <= end && end <= total - 1) {
+                var mimeType = getMime(reqPath);
+                var header = buildHeader(mimeType, stat, {
+                    'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
+                    'Content-Length': start == end ? 0 : (end - start + 1),
+                    'Accept-Ranges': 'bytes'
+                });
+                response.writeHead(206, header);
+                var fileStream = fs.createReadStream(fullPath, {
+                    start: start,
+                    end: end
+                });
+                pipeFileToResponse(fileStream, mimeType, response);
 
-            callback(start, end);
-            fileStream.on('end', () => {
+                callback(start, end);
+                fileStream.on('end', () => {
 
-            });
+                });
+            } else {
+                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true, "HTTP");
+                var header = buildHeader(mimeType, stat, {
+                    'Content-Range': 'bytes */' + stat.size
+                });
+                response.writeHead(416, header);
+                response.end();
+            }
         } else {
-            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true, "HTTP");
-            var header = buildHeader(mimeType, stat, {
-                'Content-Range': 'bytes */' + stat.size
-            });
-            response.writeHead(416, header);
-            response.end();
+            log(err.message + ".\n" + err.stack, true, "HTTP");
         }
     });
 }
@@ -933,7 +969,10 @@ var commands = {
             if (!args || args.length != 2) {
                 var pass = args[0];
                 bcrypt.hash(pass, 8, function (err, hash) {
-                    if (err) return;
+                    if (err) {
+                        log(err.message + ".\n" + err.stack, true, "bCrypt");
+                        return;
+                    }
                     settings.security.workerPassword = hash;
                     DB.save(projectPath + "/MWSProject.json", settings);
                     log("Distributed Networking Worker password set!", false, "CONSOLE");
