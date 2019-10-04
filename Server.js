@@ -262,7 +262,7 @@ function giveJobToWorker(workerSocket, job) {
     workerSocket.emit("doJob", job);
     workerIo.jobs[job.jobId].jobTaken = true;
 }
-var jobGroupTracker = {}
+var jobGroupTracker = {};
 function doDistributedJob(jobName, data, callback) { //test when home
     var d = new Date();
     var trackerId = d.getTime() + getRandomInt(1, 999999999);;
@@ -386,11 +386,13 @@ function init(projectPath = ".", workerParams = {}) {
                 if (ws.isLoggedIn) workerIo.workerCount--;
                 ws.isLoggedIn = false; //prevent trying to assign the job back to the same socket
                 if (ws.jobId && workerIo.jobs[ws.jobId]) {
+                    workerIo.jobs[ws.jobId].jobTaken = false;
                     giveJobToAvailableWorker(workerIo.jobs[ws.jobId]);
                 }
             });
         });
     }
+
     server = http.createServer(function (request, response) {
         setTimeout(function () {
             try {
