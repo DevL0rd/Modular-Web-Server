@@ -4,21 +4,23 @@
 //Include Libs
 const url = require('url');
 const fs = require('fs');
+const os = require('os');
+const { spawn, exec } = require('child_process');
 const http = require('http');
 const crypto = require('crypto');
-var bcrypt = require("bcryptjs");
+const bcrypt = require("bcryptjs");
 const mime = require('mime-types')
 const Throttle = require('throttle');
 const mkdirp = require('mkdirp');
 const slash = require('slash');
+const chokidar = require('chokidar');
+const md5 = require('md5');
+var watcher;
 const DB = require('./Devlord_modules/DB.js');
 const cc = require('./Devlord_modules/conColors.js');
 const cs = require('./Devlord_modules/conSplash.js');
 const readdirp = require('readdirp');
 var NameSpace = "HTTP";
-//
-//Include DevLord Libs.
-//
 
 
 function timeStamp() {
@@ -317,6 +319,34 @@ function chunkArray(arr, chunkCount, balanced = true) {
     }
     return out;
 }
+function deleteFolderRecursive(path) {
+    if (fs.existsSync(path)) {
+        fs.readdirSync(path).forEach(function (file, index) {
+            var curPath = path + "/" + file;
+            if (fs.lstatSync(curPath).isDirectory()) { // recurse
+                deleteFolderRecursive(curPath);
+            } else { // delete file
+                fs.unlinkSync(curPath);
+            }
+        });
+        fs.rmdirSync(path);
+    }
+};
+function downloadFile(from, to, callbackReceived, callbackRename) {
+    const file = fs.createWriteStream(to + ".incomplete");
+    const request = http.get(from, function (response) {
+        if (response.statusCode == 200) {
+            response.pipe(file);
+            response.on('end', function () {
+                callbackReceived();
+                fs.rename(to + ".incomplete", to, function (err) {
+                    if (err) log(err.message + ".\n" + err.stack, true, "Server");
+                    callbackRename();
+                });
+            })
+        }
+    });
+}
 function init(projectPath = ".", workerParams = {}) {
     loadProjectFile(projectPath);
     settings.projectPath = projectPath; //read only check of path
@@ -326,20 +356,21 @@ function init(projectPath = ".", workerParams = {}) {
     }
     workerIo.isWorker = (Object.keys(workerParams).length);
     if (workerIo.isWorker) {
-        log("Starting server as worker...", false, "Server");
+        log("Starting worker...", false, "Worker");
         wio = require('socket.io-client');
-        wsocket = wio("http://" + workerParams.mainServerIp + ":" + settings.workerPORT, {
+        var mainServerUrl = "http://" + workerParams.mainServerIp + ":" + settings.workerPORT;
+        wsocket = wio(mainServerUrl, {
             reconnect: true
         });
         wsocket.on("connect", function () {
-            log("Worker connected to main server. Authenticating...", false, "Server");
+            log("Worker connected to main server. Authenticating...", false, "Worker");
             wsocket.emit("authenticate", workerParams.password)
         });
         wsocket.on("loginResponse", function (isLogged) {
             if (isLogged) {
                 log("Worker authenticated.", false, "Server");
             } else {
-                log("Worker failed to authenticate. Password incorrect.", true, "Server");
+                log("Worker failed to authenticate. Password incorrect.", true, "Worker");
             }
         });
         wsocket.on("doJob", function (job) {
@@ -352,13 +383,127 @@ function init(projectPath = ".", workerParams = {}) {
         });
         wsocket.on("disconnect", function () {
             wsocket.jobId;
-            log("Worker disconnected from main server.", false, "Server");
+            log("Worker disconnected from main server.", false, "Worker");
+        });
+        wsocket.on('fileAdd', function (data) {
+            var localFilePath = settings.projectPath + "/" + data.path;
+            if (!fs.existsSync(localFilePath)) {
+                //get file
+                log("File '" + data.path + "' added.", false, "Worker");
+                downloadFile(mainServerUrl + "/" + data.path, localFilePath, function () {
+                }, function () {
+                    log("File '" + data.path + "' downloaded.", false, "Worker");
+                });
+            } else {
+                //delete file and add if not main server
+            }
+        });
+        wsocket.on('fileChange', function (data) {
+            var localFilePath = settings.projectPath + "/" + data.path;
+            if (fs.existsSync(localFilePath)) {
+                fs.readFile(localFilePath, function (err, buf) {
+                    var lmd5 = md5(buf);
+                    if (lmd5 != data.md5) {
+                        //get new file if different
+                        log("File '" + data.path + "' changed.", false, "Worker");
+
+                        downloadFile(mainServerUrl + "/" + data.path, localFilePath, function () {
+                            fs.unlink(localFilePath, function (err) {
+                                if (err) {
+                                    log(err.message + ".\n" + err.stack, true, "Worker");
+                                    return
+                                }
+                            });
+                        }, function () {
+                            log("File '" + data.path + "' downloaded.", false, "Worker");
+                        });
+
+                    }
+                });
+
+            } else {
+                log("File '" + data.path + "' changed but is missing, downloading file.", false, "Worker");
+                downloadFile(mainServerUrl + "/" + data.path, localFilePath, function () {
+                }, function () {
+                    log("File '" + data.path + "' downloaded.", false, "Worker");
+                });
+                //download file if missing
+            }
+        });
+        wsocket.on('fileUnlink', function (data) {
+            var localFilePath = settings.projectPath + "/" + data.path;
+            if (fs.existsSync(localFilePath)) {
+                fs.unlink(localFilePath, function (err) {
+                    if (err) {
+                        log(err.message + ".\n" + err.stack, true, "Worker");
+                        return
+                    }
+                    log("File '" + data.path + "' removed.", false, "Worker");
+                });
+            }
+        });
+        wsocket.on('addDir', function (data) {
+            var localFilePath = settings.projectPath + "/" + data.path;
+            if (!fs.existsSync(localFilePath)) {
+                fs.mkdirSync(localFilePath);
+                log("Directory '" + data.path + "' added. Sending update to workers", false, "Worker");
+            }
+        });
+        wsocket.on('unlinkDir', function (data) {
+            var localFilePath = settings.projectPath + "/" + data.path;
+
+            if (fs.existsSync(localFilePath)) {
+                deleteFolderRecursive(localFilePath);
+                log("Directory '" + data.path + "' removed.", false, "Worker");
+            }
         });
     } else {
+
         log("Starting master server...", false, "Server");
         //start websocket for distributed networking
         wserver = http.createServer(function (request, response) {
-            //handle requests later for transfering updated webroot, plugin, and config files
+            if (request.method == 'GET') {
+                var urlParts = url.parse(request.url);
+                var reqPath = decodeURI(urlParts.pathname);
+                var requestIsPath = !reqPath.includes(".");
+                if (requestIsPath && reqPath.substr(reqPath.length - 1) != "/") {
+                    response.writeHead(301, {
+                        'Location': reqPath + "/"
+                    });
+                    response.end()
+                    return;
+                }
+                var fullPath = settings.projectPath + reqPath
+                var extension = reqPath.split('.').pop().toLowerCase()
+                fs.exists(fullPath, function (exists) {
+                    if (exists) {
+                        if (request.headers['range']) {
+                            sendByteRange(fullPath, request, response, function (start, end) {
+                                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " requested.", false, "HTTP");
+                            }, function (start, end) {
+                                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " sent!", false, "HTTP");
+                            });
+                        } else {
+                            sendFile(fullPath, request, response, function (isCached) {
+                                if (isCached) {
+                                    log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "'.", false, "HTTP");
+                                } else {
+                                    log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' requested.", false, "HTTP");
+                                }
+                            }, function (isCached) {
+                                if (!isCached) {
+                                    log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' sent!", false, "HTTP");
+                                }
+                            });
+                        }
+                    } else {
+                        log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true, "HTTP");
+                        response.writeHead(404);
+                        response.end();
+                        return;
+                    }
+                });
+            }
         });
         dio = require('socket.io')(wserver);
         dio.on('error', function (err) {
@@ -416,6 +561,69 @@ function init(projectPath = ".", workerParams = {}) {
                 }
             });
         });
+        log("Starting tracking of project files. Scanning...", false, "Server");
+        watcher = chokidar.watch(projectPath, {
+            persistent: true,
+            ignored: ['**/*.txt', '.git'],
+            ignoreInitial: true,
+            followSymlinks: true,
+            cwd: projectPath,
+            usePolling: true,
+            interval: 100,
+            binaryInterval: 300,
+            alwaysStat: true,
+            depth: 99,
+            awaitWriteFinish: {
+                stabilityThreshold: 2000,
+                pollInterval: 100
+            },
+            ignorePermissionErrors: true,
+            atomic: true // or a custom 'atomicity delay', in milliseconds (default 100)
+        });
+        watcher.on('ready', function () {
+            watcher.on('add', function (path, stats) {
+                fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
+                    dio.emit('fileAdd', { path: path, stats: stats, md5: md5(buf) });
+                });
+                log("File '" + path + "' added. Sending update to workers.", false, "Server");
+            });
+            watcher.on('change', function (path, stats) {
+                fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
+                    dio.emit('fileChange', { path: path, stats: stats, md5: md5(buf) });
+                });
+                log("File '" + path + "' modified. Sending update to workers.", false, "Server");
+            });
+            watcher.on('unlink', function (path) {
+                dio.emit('fileUnlink', { path: path });
+                log("File '" + path + "' removed. Sending update to workers.", false, "Server");
+            });
+            watcher.on('addDir', function (path, stats) {
+                dio.emit('addDir', { path: path, stats: stats });
+                log("Directory '" + path + "' added. Sending update to workers.", false, "Server");
+            });
+            watcher.on('unlinkDir', function (path) {
+                dio.emit('unlinkDir', { path: path });
+                log("Directory '" + path + "' removed. Sending update to workers.", false, "Server");
+            });
+            log('Initial scan complete. Ready for changes', false, "Server");
+        });
+
+        var workers = os.cpus().length * 2 - 1; //get cpu thread count without current thread
+        log("Starting " + workers + " worker threads...", false, "Server");
+        while (workers > 0) {
+                var worker = spawn(/^win/.test(process.platform) ? 'npm.cmd' : 'npm', ['start', settings.projectPath, 'worker', '0.0.0.0', "password", { stdio: 'ignore' }]);//make password automagic later
+                worker.stdout.on('data', (data) => {
+                    // console.log(data.toString());
+                });
+                worker.stderr.on('data', (data) => {
+                    console.error(data.toString());
+                });
+                worker.on('exit', (code) => {
+                    console.log(`Child exited with code ${code}`);
+                });
+                children.push(worker);
+                workers--;
+        }
     }
 
     server = http.createServer(function (request, response) {
@@ -659,7 +867,7 @@ function Http_Handler(request, response) {
                         log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " sent! (" + executionTime + "ms)", false, "HTTP");
                     });
                 } else {
-                    sendFile(reqPath, request, response, function (isCached) {
+                    sendFile(fullPath, request, response, function (isCached) {
                         var executionTime = new Date().getTime() - startTime;
                         if (isCached) {
                             log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "' (" + executionTime + "ms)", false, "HTTP");
@@ -691,8 +899,7 @@ function Http_Handler(request, response) {
 }
 
 function sendFile(reqPath, request, response, callback) {
-    var fullPath = settings.webRoot + reqPath;
-    fs.stat(fullPath, function (err, stat) {
+    fs.stat(reqPath, function (err, stat) {
         if (!err) {
             var reqModDate = request.headers["if-modified-since"];
             //remove milliseconds from modified date, some browsers do not keep the date that accurately.
@@ -706,7 +913,7 @@ function sendFile(reqPath, request, response, callback) {
                 var mimeType = getMime(reqPath);
                 var header = buildHeader(mimeType, stat);
                 response.writeHead(200, header);
-                var fileStream = fs.createReadStream(fullPath);
+                var fileStream = fs.createReadStream(reqPath);
                 pipeFileToResponse(fileStream, mimeType, response);
                 callback(false);
                 fileStream.on('end', () => {
@@ -982,6 +1189,42 @@ var commands = {
             }
         }
     },
+    replicatefile: {
+        usage: "replicatefile <path>",
+        help: "Forcefully replicates file to workers.",
+        do: function (args, fullMessage) {
+            if (!args || args.length != 2) {
+                var file = args[0];
+                var localFilePath = settings.projectPath + "/" + file;
+                if (fs.existsSync(localFilePath)) {
+                    var stats = fs.statSync(localFilePath);
+                    dio.emit('fileChange', { path: file, stats: stats });
+                    log("File '" + file + "' modified. Sending update to workers.", false, "CONSOLE");
+                } else {
+                    log("That file does not exist.", false, "CONSOLE");
+                }
+            } else {
+                log("Usage: " + this.usage, false, "CONSOLE");
+            }
+        }
+    },
+    replicatefolder: {
+        usage: "replicatefolder <path>",
+        help: "Forcefully replicates folder to workers.",
+        do: function (args, fullMessage) {
+            if (!args || args.length != 2) {
+                var folder = args[0];
+                var localFolderPath = settings.projectPath + "/" + folder;
+                if (fs.existsSync(localFolderPath)) {
+                    log("This command does not work atm. This will be added later.", false, "CONSOLE");
+                } else {
+                    log("That folder does not exist.", false, "CONSOLE");
+                }
+            } else {
+                log("Usage: " + this.usage, false, "CONSOLE");
+            }
+        }
+    },
     exit: {
         usage: "exit",
         help: "Shuts the server down gracefully.",
@@ -1034,7 +1277,17 @@ var events = {
         }
     }
 };
-
+var children = [];
+var cleanExit = function() { 
+    console.log('killing', children.length, 'child processes');
+    children.forEach(function(child) {
+        child.kill();
+    });
+    process.exit() 
+};
+process.on('SIGINT', cleanExit); // catch ctrl-c
+process.on('SIGTERM', cleanExit); // catch kill
+process.on('exit', cleanExit); // catch exit signal
 exports.init = init;
 exports.stopServer = stopServer;
 exports.plugins = plugins;
