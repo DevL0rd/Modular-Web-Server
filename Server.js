@@ -105,9 +105,7 @@ var pluginExports = {};
 var server;
 var wserver;
 var io;
-var dio;
 var wio;
-var wsocket;
 var settings;
 var routes;
 var redirects;
@@ -237,11 +235,11 @@ function getRandomInt(min, max) {
     max = Math.floor(max);
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
-var workerIo = { isWorker: false, queueJob: queueJob, workerCount: 0, jobs: {}, doDistributedJob: doDistributedJob }
-function queueJob(jobName, data, callback, trackerId = 0) {
+var workerIo = { isWorker: false, queueJob: queueJob, workerCount: 0, jobs: {}, doDistributedJob: doDistributedJob, socket: false, io: false }
+function queueJob(jobName, data, globalData, callback, trackerId = 0) {
     var d = new Date();
     var jobId = d.getTime() + getRandomInt(1, 999999999);
-    workerIo.jobs[jobId] = { jobId: jobId, jobName: jobName, data: data, callback: callback, trackerId: trackerId, jobTaken: false, currentJob: false };
+    workerIo.jobs[jobId] = { jobId: jobId, jobName: jobName, data: data, globalData: globalData, callback: callback, trackerId: trackerId, jobTaken: false, currentJob: false };
     giveJobToAvailableWorker(workerIo.jobs[jobId]);
     return jobId;
 }
@@ -256,7 +254,7 @@ function giveAvailableJob(workerSocket) {
     return false;
 }
 function giveJobToAvailableWorker(job) {
-    var dsockets = dio.sockets.sockets;
+    var dsockets = workerIo.io.sockets.sockets;
     for (var socketId in dsockets) {
         var workerSocket = dsockets[socketId];
         if (workerSocket.isLoggedIn && !workerSocket.jobId) {
@@ -272,14 +270,14 @@ function giveJobToWorker(workerSocket, job) {
     workerIo.jobs[job.jobId].jobTaken = true;
 }
 var jobGroupTracker = {};
-function doDistributedJob(jobName, data, callback) { //test when home
+function doDistributedJob(jobName, data, globalData, callback) { //test when home
     var d = new Date();
     var trackerId = d.getTime() + getRandomInt(1, 999999999);;
-    var jobDatas = chunkArray(data, workerIo.workerCount);
+    var jobDatas = chunkData(data, workerIo.workerCount);
     jobGroupTracker[trackerId] = { callback: callback, jobIds: {}, results: [] };
     for (i in jobDatas) {
         var jobData = jobDatas[i];
-        jobGroupTracker[trackerId].jobIds[queueJob(jobName, jobData, trackJobProgress, trackerId)] = true; //just store the jobs id in and delete when completed job.
+        jobGroupTracker[trackerId].jobIds[queueJob(jobName, jobData, globalData, trackJobProgress, trackerId)] = true; //just store the jobs id in and delete when completed job.
     }
 }
 function trackJobProgress(data) {
@@ -290,9 +288,15 @@ function trackJobProgress(data) {
         delete jobGroupTracker[data.trackerId];
     }
 }
-function chunkArray(arr, chunkCount, balanced = true) {
-    if (chunkCount < 2)
-        return [arr];
+const arrayToObject = (array, keyField) =>
+    array.reduce((obj, item) => {
+        obj[item[keyField]] = item
+        return obj
+    }, {})
+function chunkData(arr, chunkCount, balanced = true) {
+    var isObject = (typeof arr === 'object')
+    if (isObject) arr = Object.values(arr);
+    if (chunkCount < 2) return [arr];
     var len = arr.length,
         out = [],
         i = 0,
@@ -316,6 +320,11 @@ function chunkArray(arr, chunkCount, balanced = true) {
             out.push(arr.slice(i, i += size));
         }
         out.push(arr.slice(size * chunkCount));
+    }
+    if (isObject) {
+        for (i in out) {
+            out[i] = arrayToObject(out[i], "id");
+        }
     }
     return out;
 }
@@ -357,35 +366,35 @@ function init(projectPath = ".", workerParams = {}) {
     workerIo.isWorker = (Object.keys(workerParams).length);
     if (workerIo.isWorker) {
         log("Starting worker...", false, "Worker");
-        wio = require('socket.io-client');
+        var wio = require('socket.io-client');
         var mainServerUrl = "http://" + workerParams.mainServerIp + ":" + settings.workerPORT;
-        wsocket = wio(mainServerUrl, {
+        workerIo.socket = wio(mainServerUrl, {
             reconnect: true
         });
-        wsocket.on("connect", function () {
+        workerIo.socket.on("connect", function () {
             log("Worker connected to main server. Authenticating...", false, "Worker");
-            wsocket.emit("authenticate", workerParams.password)
+            workerIo.socket.emit("authenticate", workerParams.password)
         });
-        wsocket.on("loginResponse", function (isLogged) {
+        workerIo.socket.on("loginResponse", function (isLogged) {
             if (isLogged) {
                 log("Worker authenticated.", false, "Server");
             } else {
                 log("Worker failed to authenticate. Password incorrect.", true, "Worker");
             }
         });
-        wsocket.on("doJob", function (job) {
-            wsocket.emit("doJobConfirm");
-            job.wsocket = wsocket;
+        workerIo.socket.on("doJob", function (job) {
+            workerIo.socket.emit("doJobConfirm");
+            job.wsocket = workerIo.socket;
             job.complete = function (result) {
                 this.wsocket.emit("completeJob", { result: result, jobId: this.jobId, trackerId: this.trackerId })
             };
             events.trigger("doJob", job);
         });
-        wsocket.on("disconnect", function () {
-            wsocket.jobId;
+        workerIo.socket.on("disconnect", function () {
+            workerIo.socket.jobId;
             log("Worker disconnected from main server.", false, "Worker");
         });
-        wsocket.on('fileAdd', function (data) {
+        workerIo.socket.on('fileAdd', function (data) {
             var localFilePath = settings.projectPath + "/" + data.path;
             if (!fs.existsSync(localFilePath)) {
                 //get file
@@ -398,7 +407,7 @@ function init(projectPath = ".", workerParams = {}) {
                 //delete file and add if not main server
             }
         });
-        wsocket.on('fileChange', function (data) {
+        workerIo.socket.on('fileChange', function (data) {
             var localFilePath = settings.projectPath + "/" + data.path;
             if (fs.existsSync(localFilePath)) {
                 fs.readFile(localFilePath, function (err, buf) {
@@ -430,7 +439,7 @@ function init(projectPath = ".", workerParams = {}) {
                 //download file if missing
             }
         });
-        wsocket.on('fileUnlink', function (data) {
+        workerIo.socket.on('fileUnlink', function (data) {
             var localFilePath = settings.projectPath + "/" + data.path;
             if (fs.existsSync(localFilePath)) {
                 fs.unlink(localFilePath, function (err) {
@@ -442,14 +451,14 @@ function init(projectPath = ".", workerParams = {}) {
                 });
             }
         });
-        wsocket.on('addDir', function (data) {
+        workerIo.socket.on('addDir', function (data) {
             var localFilePath = settings.projectPath + "/" + data.path;
             if (!fs.existsSync(localFilePath)) {
                 fs.mkdirSync(localFilePath);
                 log("Directory '" + data.path + "' added. Sending update to workers", false, "Worker");
             }
         });
-        wsocket.on('unlinkDir', function (data) {
+        workerIo.socket.on('unlinkDir', function (data) {
             var localFilePath = settings.projectPath + "/" + data.path;
 
             if (fs.existsSync(localFilePath)) {
@@ -505,12 +514,13 @@ function init(projectPath = ".", workerParams = {}) {
                 });
             }
         });
-        dio = require('socket.io')(wserver);
-        dio.on('error', function (err) {
+
+        workerIo.io = require('socket.io')(wserver);
+        workerIo.io.on('error', function (err) {
             // Handle your error here
             log(err.message + ".\n" + err.stack, true, "IO");
         });
-        dio.on('uncaughtException', function (err) {
+        workerIo.io.on('uncaughtException', function (err) {
             log(err.message + ".\n" + err.stack, true, "IO");
         });
         wserver.listen(settings.workerPORT, settings.IP);
@@ -521,7 +531,7 @@ function init(projectPath = ".", workerParams = {}) {
         wserver.on('uncaughtException', function (err) {
             log(err.message + ".\n" + err.stack, true, "Server");
         });
-        dio.on("connection", function (ws) {
+        workerIo.io.on("connection", function (ws) {
             ws.jobId = 0;
             log("Worker connected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
             ws.on("authenticate", function (pass) {
@@ -543,6 +553,7 @@ function init(projectPath = ".", workerParams = {}) {
                         ws.disconnect();
                     }
                 });
+                events.trigger("workerConnected", ws);
             });
 
             ws.on("completeJob", function (data) {
@@ -583,47 +594,47 @@ function init(projectPath = ".", workerParams = {}) {
         watcher.on('ready', function () {
             watcher.on('add', function (path, stats) {
                 fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
-                    dio.emit('fileAdd', { path: path, stats: stats, md5: md5(buf) });
+                    workerIo.io.emit('fileAdd', { path: path, stats: stats, md5: md5(buf) });
                 });
                 log("File '" + path + "' added. Sending update to workers.", false, "Server");
             });
             watcher.on('change', function (path, stats) {
                 fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
-                    dio.emit('fileChange', { path: path, stats: stats, md5: md5(buf) });
+                    workerIo.io.emit('fileChange', { path: path, stats: stats, md5: md5(buf) });
                 });
                 log("File '" + path + "' modified. Sending update to workers.", false, "Server");
             });
             watcher.on('unlink', function (path) {
-                dio.emit('fileUnlink', { path: path });
+                workerIo.io.emit('fileUnlink', { path: path });
                 log("File '" + path + "' removed. Sending update to workers.", false, "Server");
             });
             watcher.on('addDir', function (path, stats) {
-                dio.emit('addDir', { path: path, stats: stats });
+                workerIo.io.emit('addDir', { path: path, stats: stats });
                 log("Directory '" + path + "' added. Sending update to workers.", false, "Server");
             });
             watcher.on('unlinkDir', function (path) {
-                dio.emit('unlinkDir', { path: path });
+                workerIo.io.emit('unlinkDir', { path: path });
                 log("Directory '" + path + "' removed. Sending update to workers.", false, "Server");
             });
             log('Initial scan complete. Ready for changes', false, "Server");
         });
 
-        var workers = os.cpus().length * 2 - 1; //get cpu thread count without current thread
-        log("Starting " + workers + " worker threads...", false, "Server");
-        while (workers > 0) {
-                var worker = spawn(/^win/.test(process.platform) ? 'npm.cmd' : 'npm', ['start', settings.projectPath, 'worker', '0.0.0.0', "password", { stdio: 'ignore' }]);//make password automagic later
-                worker.stdout.on('data', (data) => {
-                    // console.log(data.toString());
-                });
-                worker.stderr.on('data', (data) => {
-                    console.error(data.toString());
-                });
-                worker.on('exit', (code) => {
-                    console.log(`Child exited with code ${code}`);
-                });
-                children.push(worker);
-                workers--;
-        }
+        // var workers = os.cpus().length * 2 - 1; //get cpu thread count without current thread
+        // log("Starting " + workers + " worker threads...", false, "Server");
+        // while (workers > 0) {
+        //     var worker = spawn(/^win/.test(process.platform) ? 'npm.cmd' : 'npm', ['start', settings.projectPath, 'worker', '0.0.0.0', "password", { stdio: 'ignore' }]);//make password automagic later
+        //     worker.stdout.on('data', (data) => {
+        //         // console.log(data.toString());
+        //     });
+        //     worker.stderr.on('data', (data) => {
+        //         console.error(data.toString());
+        //     });
+        //     worker.on('exit', (code) => {
+        //         console.log(`Child exited with code ${code}`);
+        //     });
+        //     children.push(worker);
+        //     workers--;
+        // }
     }
 
     server = http.createServer(function (request, response) {
@@ -1198,7 +1209,7 @@ var commands = {
                 var localFilePath = settings.projectPath + "/" + file;
                 if (fs.existsSync(localFilePath)) {
                     var stats = fs.statSync(localFilePath);
-                    dio.emit('fileChange', { path: file, stats: stats });
+                    workerIo.io.emit('fileChange', { path: file, stats: stats });
                     log("File '" + file + "' modified. Sending update to workers.", false, "CONSOLE");
                 } else {
                     log("That file does not exist.", false, "CONSOLE");
@@ -1245,6 +1256,7 @@ var events = {
     "loadedPlugin": [],
     "loadedPlugins": [],
     "doJob": [],
+    "workerConnected": [],
     "on": function (event, callback, owner) {
         if (!owner) owner = "Server"
         if (this[event] && event != "trigger" && event != "on" && event != "addEvent" && event != "removeEvents") {
@@ -1278,12 +1290,12 @@ var events = {
     }
 };
 var children = [];
-var cleanExit = function() { 
+var cleanExit = function () {
     console.log('killing', children.length, 'child processes');
-    children.forEach(function(child) {
+    children.forEach(function (child) {
         child.kill();
     });
-    process.exit() 
+    process.exit()
 };
 process.on('SIGINT', cleanExit); // catch ctrl-c
 process.on('SIGTERM', cleanExit); // catch kill
