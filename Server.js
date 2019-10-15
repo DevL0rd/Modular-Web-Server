@@ -130,50 +130,54 @@ function loadProjectFile(nProjectPath) {
         settings = DB.load(projectPath + "/MWSProject.json")
     } else {
         settings = {
-            Name: "New Webserver App",
-            Author: "",
-            IP: "0.0.0.0",
-            PORT: 80,
-            workerPORT: 8080,
-            timeout: 5000,
-            maxHeadersCount: 20,
-            maxPostSizeMB: 8,
-            maxUrlLength: 2048,
-            directoryIndex: ["index.html"],
-            webRoot: projectPath + "/WebRoot",
-            pluginsPath: projectPath + "/Plugins",
-            throttling: {
-                videoBitRateKB: 51000,
-                audioBitRateKB: 230,
-                applicationDownloadThrottleMB: 15,
+            "Name": "New Webserver App",
+            "Author": "",
+            "IP": "0.0.0.0",
+            "PORT": 80,
+            "timeout": 5000,
+            "maxHeadersCount": 20,
+            "maxPostSizeMB": 8,
+            "maxUrlLength": 2048,
+            "directoryIndex": ["index.html"],
+            "webRoot": projectPath + "/WebRoot",
+            "pluginsPath": projectPath + "/Plugins",
+            "throttling": {
+                "videoBitRateKB": 51000,
+                "audioBitRateKB": 230,
+                "applicationDownloadThrottleMB": 15,
             },
-            defaultHeaders: {
+            "defaultHeaders": {
                 "Cache-Control": "max-age=0",
                 "X-Frame-Options": "SAMEORIGIN",
                 "X-XSS-Protection": "1; mode=block",
                 "X-Content-Type-Options": "nosniff"
             },
-            security: {
-                hotlinkProtection: {
-                    enabled: false,
-                    domains: ["localhost"],
-                    allowedExtensions: ["htm", "html"]
+            "security": {
+                "hotlinkProtection": {
+                    "enabled": false,
+                    "domains": ["localhost"],
+                    "allowedExtensions": ["htm", "html"]
                 },
-                blockedPaths: [],
-                blockedFiles: [],
-                blockedFileNames: [],
-                blockedFileExtensions: [],
-                workerPassword: ""
+                "blockedPaths": [],
+                "blockedFiles": [],
+                "blockedFileNames": [],
+                "blockedFileExtensions": []
             },
-            logging: {
-                enabled: true,
-                directory: projectPath + "/Logs",
-                consoleLoggingEnabled: false,
-                errorLoggingEnabled: true,
-                printConsole: true,
-                printErrors: true,
-                consoleNamespacePrintFilter: ["HTTP"],
-                errorNamespacePrintFilter: []
+            "logging": {
+                "enabled": true,
+                "directory": projectPath + "/Logs",
+                "consoleLoggingEnabled": false,
+                "errorLoggingEnabled": true,
+                "printConsole": true,
+                "printErrors": true,
+                "consoleNamespacePrintFilter": ["HTTP"],
+                "errorNamespacePrintFilter": []
+            },
+            "clustering": {
+                "workerPORT": 8080,
+                "enabled": false,
+                "clusteredFileSync": false,
+                "workerPassword": "$2a$08$QS2m8v3lGwWelBzw2W60UelvKdYLUwjlCNP07.UNnT4r9SsxgcXGK"
             }
         }
         DB.save(projectPath + "/MWSProject.json", settings);
@@ -182,7 +186,7 @@ function loadProjectFile(nProjectPath) {
                 log(err.message + ".\n" + err.stack, true, "bCrypt");
                 return;
             }
-            settings.security.workerPassword = hash;
+            settings.clustering.workerPassword = hash;
             DB.save(projectPath + "/MWSProject.json", settings);
         });
     }
@@ -367,7 +371,7 @@ function init(projectPath = ".", workerParams = {}) {
     if (workerIo.isWorker) {
         log("Starting worker...", false, "Worker");
         var wio = require('socket.io-client');
-        var mainServerUrl = "http://" + workerParams.mainServerIp + ":" + settings.workerPORT;
+        var mainServerUrl = "http://" + workerParams.mainServerIp + ":" + settings.clustering.workerPORT;
         workerIo.socket = wio(mainServerUrl, {
             reconnect: true
         });
@@ -470,171 +474,178 @@ function init(projectPath = ".", workerParams = {}) {
 
         log("Starting master server...", false, "Server");
         //start websocket for distributed networking
-        wserver = http.createServer(function (request, response) {
-            if (request.method == 'GET') {
-                var urlParts = url.parse(request.url);
-                var reqPath = decodeURI(urlParts.pathname);
-                var requestIsPath = !reqPath.includes(".");
-                if (requestIsPath && reqPath.substr(reqPath.length - 1) != "/") {
-                    response.writeHead(301, {
-                        'Location': reqPath + "/"
-                    });
-                    response.end()
-                    return;
-                }
-                var fullPath = settings.projectPath + reqPath
-                var extension = reqPath.split('.').pop().toLowerCase()
-                fs.exists(fullPath, function (exists) {
-                    if (exists) {
-                        if (request.headers['range']) {
-                            sendByteRange(fullPath, request, response, function (start, end) {
-                                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " requested.", false, "HTTP");
-                            }, function (start, end) {
-                                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " sent!", false, "HTTP");
-                            });
+        if (settings.clustering.enabled) {
+            wserver = http.createServer(function (request, response) {
+                if (request.method == 'GET') {
+                    var urlParts = url.parse(request.url);
+                    var reqPath = decodeURI(urlParts.pathname);
+                    var requestIsPath = !reqPath.includes(".");
+                    if (requestIsPath && reqPath.substr(reqPath.length - 1) != "/") {
+                        response.writeHead(301, {
+                            'Location': reqPath + "/"
+                        });
+                        response.end()
+                        return;
+                    }
+                    var fullPath = settings.projectPath + reqPath
+                    var extension = reqPath.split('.').pop().toLowerCase()
+                    fs.exists(fullPath, function (exists) {
+                        if (exists) {
+                            if (request.headers['range']) {
+                                sendByteRange(fullPath, request, response, function (start, end) {
+                                    log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " requested.", false, "HTTP");
+                                }, function (start, end) {
+                                    log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' byte range " + start + "-" + end + " sent!", false, "HTTP");
+                                });
+                            } else {
+                                sendFile(fullPath, request, response, function (isCached) {
+                                    if (isCached) {
+                                        log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "'.", false, "HTTP");
+                                    } else {
+                                        log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' requested.", false, "HTTP");
+                                    }
+                                }, function (isCached) {
+                                    if (!isCached) {
+                                        log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' sent!", false, "HTTP");
+                                    }
+                                });
+                            }
                         } else {
-                            sendFile(fullPath, request, response, function (isCached) {
-                                if (isCached) {
-                                    log("[" + request.connection.remoteAddress + "] <GET> (cached) '" + reqPath + "'.", false, "HTTP");
-                                } else {
-                                    log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' requested.", false, "HTTP");
-                                }
-                            }, function (isCached) {
-                                if (!isCached) {
-                                    log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' sent!", false, "HTTP");
-                                }
-                            });
+                            log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true, "HTTP");
+                            response.writeHead(404);
+                            response.end();
+                            return;
                         }
-                    } else {
-                        log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true, "HTTP");
-                        response.writeHead(404);
-                        response.end();
-                        return;
-                    }
-                });
-            }
-        });
-
-        workerIo.io = require('socket.io')(wserver);
-        workerIo.io.on('error', function (err) {
-            // Handle your error here
-            log(err.message + ".\n" + err.stack, true, "IO");
-        });
-        workerIo.io.on('uncaughtException', function (err) {
-            log(err.message + ".\n" + err.stack, true, "IO");
-        });
-        wserver.listen(settings.workerPORT, settings.IP);
-        wserver.on('error', function (err) {
-            // Handle your error here
-            log(err.message + ".\n" + err.stack, true, "Server");
-        });
-        wserver.on('uncaughtException', function (err) {
-            log(err.message + ".\n" + err.stack, true, "Server");
-        });
-        workerIo.io.on("connection", function (ws) {
-            ws.jobId = 0;
-            log("Worker connected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
-            ws.on("authenticate", function (pass) {
-                ws.jobId = 0;
-                bcrypt.compare(pass, settings.security.workerPassword, function (err, passMatches) {
-                    if (err) {
-                        log(err.message + ".\n" + err.stack, true, "bCrypt");
-                        return;
-                    };
-                    if (passMatches) {
-                        log("Worker authenticated succesfully. [" + ws.request.connection.remoteAddress + "]", false, "Server");
-                        workerIo.workerCount++;
-                        ws.isLoggedIn = true;
-                        ws.emit("loginResponse", true);
-                        giveAvailableJob(ws); //start working
-                    } else {
-                        log("Worker used incorrect password. [" + ws.request.connection.remoteAddress + "]", true, "Server");
-                        ws.emit("loginResponse", false);
-                        ws.disconnect();
-                    }
-                });
-                events.trigger("workerConnected", ws);
-            });
-
-            ws.on("completeJob", function (data) {
-                ws.jobId = 0;
-                workerIo.jobs[data.jobId].callback(data);
-                delete workerIo.jobs[data.jobId]; //cleanup job
-                giveAvailableJob(ws); //get new job if available
-            });
-            ws.on("disconnect", function () {
-                log("Worker disconnected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
-                if (ws.isLoggedIn) workerIo.workerCount--;
-                ws.isLoggedIn = false; //prevent trying to assign the job back to the same socket
-                if (ws.jobId && workerIo.jobs[ws.jobId]) {
-                    workerIo.jobs[ws.jobId].jobTaken = false;
-                    giveJobToAvailableWorker(workerIo.jobs[ws.jobId]);
+                    });
                 }
             });
-        });
-        log("Starting tracking of project files. Scanning...", false, "Server");
-        watcher = chokidar.watch(projectPath, {
-            persistent: true,
-            ignored: ['**/*.txt', '.git'],
-            ignoreInitial: true,
-            followSymlinks: true,
-            cwd: projectPath,
-            usePolling: true,
-            interval: 100,
-            binaryInterval: 300,
-            alwaysStat: true,
-            depth: 99,
-            awaitWriteFinish: {
-                stabilityThreshold: 2000,
-                pollInterval: 100
-            },
-            ignorePermissionErrors: true,
-            atomic: true // or a custom 'atomicity delay', in milliseconds (default 100)
-        });
-        watcher.on('ready', function () {
-            watcher.on('add', function (path, stats) {
-                fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
-                    workerIo.io.emit('fileAdd', { path: path, stats: stats, md5: md5(buf) });
-                });
-                log("File '" + path + "' added. Sending update to workers.", false, "Server");
-            });
-            watcher.on('change', function (path, stats) {
-                fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
-                    workerIo.io.emit('fileChange', { path: path, stats: stats, md5: md5(buf) });
-                });
-                log("File '" + path + "' modified. Sending update to workers.", false, "Server");
-            });
-            watcher.on('unlink', function (path) {
-                workerIo.io.emit('fileUnlink', { path: path });
-                log("File '" + path + "' removed. Sending update to workers.", false, "Server");
-            });
-            watcher.on('addDir', function (path, stats) {
-                workerIo.io.emit('addDir', { path: path, stats: stats });
-                log("Directory '" + path + "' added. Sending update to workers.", false, "Server");
-            });
-            watcher.on('unlinkDir', function (path) {
-                workerIo.io.emit('unlinkDir', { path: path });
-                log("Directory '" + path + "' removed. Sending update to workers.", false, "Server");
-            });
-            log('Initial scan complete. Ready for changes', false, "Server");
-        });
 
-        // var workers = os.cpus().length * 2 - 1; //get cpu thread count without current thread
-        // log("Starting " + workers + " worker threads...", false, "Server");
-        // while (workers > 0) {
-        //     var worker = spawn(/^win/.test(process.platform) ? 'npm.cmd' : 'npm', ['start', settings.projectPath, 'worker', '0.0.0.0', "password", { stdio: 'ignore' }]);//make password automagic later
-        //     worker.stdout.on('data', (data) => {
-        //         // console.log(data.toString());
-        //     });
-        //     worker.stderr.on('data', (data) => {
-        //         console.error(data.toString());
-        //     });
-        //     worker.on('exit', (code) => {
-        //         console.log(`Child exited with code ${code}`);
-        //     });
-        //     children.push(worker);
-        //     workers--;
-        // }
+            workerIo.io = require('socket.io')(wserver);
+            workerIo.io.on('error', function (err) {
+                // Handle your error here
+                log(err.message + ".\n" + err.stack, true, "IO");
+            });
+            workerIo.io.on('uncaughtException', function (err) {
+                log(err.message + ".\n" + err.stack, true, "IO");
+            });
+            wserver.listen(settings.clustering.workerPORT, settings.IP);
+            wserver.on('error', function (err) {
+                // Handle your error here
+                log(err.message + ".\n" + err.stack, true, "Server");
+            });
+            wserver.on('uncaughtException', function (err) {
+                log(err.message + ".\n" + err.stack, true, "Server");
+            });
+            workerIo.io.on("connection", function (ws) {
+                ws.jobId = 0;
+                log("Worker connected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+                ws.on("authenticate", function (pass) {
+                    ws.jobId = 0;
+                    bcrypt.compare(pass, settings.clustering.workerPassword, function (err, passMatches) {
+                        if (err) {
+                            log(err.message + ".\n" + err.stack, true, "bCrypt");
+                            return;
+                        };
+                        if (passMatches) {
+                            log("Worker authenticated succesfully. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+                            workerIo.workerCount++;
+                            ws.isLoggedIn = true;
+                            ws.emit("loginResponse", true);
+                            giveAvailableJob(ws); //start working
+                        } else {
+                            log("Worker used incorrect password. [" + ws.request.connection.remoteAddress + "]", true, "Server");
+                            ws.emit("loginResponse", false);
+                            ws.disconnect();
+                        }
+                    });
+                    events.trigger("workerConnected", ws);
+                });
+
+                ws.on("completeJob", function (data) {
+                    ws.jobId = 0;
+                    workerIo.jobs[data.jobId].callback(data);
+                    delete workerIo.jobs[data.jobId]; //cleanup job
+                    giveAvailableJob(ws); //get new job if available
+                });
+                ws.on("disconnect", function () {
+                    log("Worker disconnected. [" + ws.request.connection.remoteAddress + "]", false, "Server");
+                    if (ws.isLoggedIn) workerIo.workerCount--;
+                    ws.isLoggedIn = false; //prevent trying to assign the job back to the same socket
+                    if (ws.jobId && workerIo.jobs[ws.jobId]) {
+                        workerIo.jobs[ws.jobId].jobTaken = false;
+                        giveJobToAvailableWorker(workerIo.jobs[ws.jobId]);
+                    }
+                });
+            });
+            if (settings.clustering.clusteredFileSync) {
+                log("Clustered server file sync starting up. Scanning...", false, "Server");
+                watcher = chokidar.watch(projectPath, {
+                    persistent: true,
+                    ignored: ['**/*.txt', '.git'],
+                    ignoreInitial: true,
+                    followSymlinks: true,
+                    cwd: projectPath,
+                    usePolling: true,
+                    interval: 100,
+                    binaryInterval: 300,
+                    alwaysStat: true,
+                    depth: 99,
+                    awaitWriteFinish: {
+                        stabilityThreshold: 2000,
+                        pollInterval: 100
+                    },
+                    ignorePermissionErrors: true,
+                    atomic: true // or a custom 'atomicity delay', in milliseconds (default 100)
+                });
+                watcher.on('ready', function () {
+                    watcher.on('add', function (path, stats) {
+                        fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
+                            workerIo.io.emit('fileAdd', { path: path, stats: stats, md5: md5(buf) });
+                        });
+                        log("File '" + path + "' added. Sending update to workers.", false, "Server");
+                    });
+                    watcher.on('change', function (path, stats) {
+                        fs.readFile(settings.projectPath + "/" + path, function (err, buf) {
+                            workerIo.io.emit('fileChange', { path: path, stats: stats, md5: md5(buf) });
+                        });
+                        log("File '" + path + "' modified. Sending update to workers.", false, "Server");
+                    });
+                    watcher.on('unlink', function (path) {
+                        workerIo.io.emit('fileUnlink', { path: path });
+                        log("File '" + path + "' removed. Sending update to workers.", false, "Server");
+                    });
+                    watcher.on('addDir', function (path, stats) {
+                        workerIo.io.emit('addDir', { path: path, stats: stats });
+                        log("Directory '" + path + "' added. Sending update to workers.", false, "Server");
+                    });
+                    watcher.on('unlinkDir', function (path) {
+                        workerIo.io.emit('unlinkDir', { path: path });
+                        log("Directory '" + path + "' removed. Sending update to workers.", false, "Server");
+                    });
+                    log('Initial scan complete. Ready for changes', false, "Server");
+                });
+            } else {
+                log("Clustered server file sync is disabled.", false, "Server");
+            }
+            // var workers = os.cpus().length * 2 - 1; //get cpu thread count without current thread
+            // log("Starting " + workers + " worker threads...", false, "Server");
+            // while (workers > 0) {
+            //     var worker = spawn(/^win/.test(process.platform) ? 'npm.cmd' : 'npm', ['start', settings.projectPath, 'worker', '0.0.0.0', "password", { stdio: 'ignore' }]);//make password automagic later
+            //     worker.stdout.on('data', (data) => {
+            //         // console.log(data.toString());
+            //     });
+            //     worker.stderr.on('data', (data) => {
+            //         console.error(data.toString());
+            //     });
+            //     worker.on('exit', (code) => {
+            //         console.log(`Child exited with code ${code}`);
+            //     });
+            //     children.push(worker);
+            //     workers--;
+            // }
+        } else {
+            log("Server clustering disabled.", false, "Server");
+        }
     }
 
     server = http.createServer(function (request, response) {
@@ -703,12 +714,12 @@ function init(projectPath = ".", workerParams = {}) {
         })
             .on('data', (fileInfo) => {
                 //LINUX SUPPORT
-                // var folder = fileInfo.fullPath.split("\\index.js")[0];
-                // if (fs.existsSync(folder + "\\MWSPlugin.json")) {
-                //     var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
-                var folder = fileInfo.fullPath.split("/index.js")[0];
-                if (fs.existsSync(folder + "/MWSPlugin.json")) {
-                    var pluginInfo = DB.load(folder + "/MWSPlugin.json");
+                var folder = fileInfo.fullPath.split("\\index.js")[0];
+                if (fs.existsSync(folder + "\\MWSPlugin.json")) {
+                    var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
+                    // var folder = fileInfo.fullPath.split("/index.js")[0];
+                    // if (fs.existsSync(folder + "/MWSPlugin.json")) {
+                    //     var pluginInfo = DB.load(folder + "/MWSPlugin.json");
                     pluginInfo["folder"] = folder;
                     pluginInfo["fullPath"] = fileInfo.fullPath;
                     if (!plugins[pluginInfo.varName]) {
@@ -1195,7 +1206,7 @@ var commands = {
                         log(err.message + ".\n" + err.stack, true, "bCrypt");
                         return;
                     }
-                    settings.security.workerPassword = hash;
+                    settings.clustering.workerPassword = hash;
                     DB.save(projectPath + "/MWSProject.json", settings);
                     log("Distributed Networking Worker password set!", false, "CONSOLE");
                 });
