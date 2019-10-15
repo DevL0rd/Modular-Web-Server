@@ -702,9 +702,13 @@ function init(projectPath = ".", workerParams = {}) {
             depth: 2
         })
             .on('data', (fileInfo) => {
-                var folder = fileInfo.fullPath.split("\\index.js")[0];
-                if (fs.existsSync(folder + "\\MWSPlugin.json")) {
-                    var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
+                //LINUX SUPPORT
+                // var folder = fileInfo.fullPath.split("\\index.js")[0];
+                // if (fs.existsSync(folder + "\\MWSPlugin.json")) {
+                //     var pluginInfo = DB.load(folder + "\\MWSPlugin.json");
+                var folder = fileInfo.fullPath.split("/index.js")[0];
+                if (fs.existsSync(folder + "/MWSPlugin.json")) {
+                    var pluginInfo = DB.load(folder + "/MWSPlugin.json");
                     pluginInfo["folder"] = folder;
                     pluginInfo["fullPath"] = fileInfo.fullPath;
                     if (!plugins[pluginInfo.varName]) {
