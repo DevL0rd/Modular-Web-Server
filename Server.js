@@ -143,8 +143,7 @@ function loadProjectFile(nProjectPath) {
             "pluginsPath": projectPath + "/Plugins",
             "upload": {
                 "enabled": true,
-                "limitMB": 0,
-                "path": projectPath + "/Uploads"
+                "limitMB": 0
             },
             "throttling": {
                 "videoBitRateKB": 51000,
@@ -206,11 +205,6 @@ function loadProjectFile(nProjectPath) {
         };
     });
     mkdirp(settings.logging.directory, function (err) {
-        if (err) {
-            log(err.message + ".\n" + err.stack, true, "mkdirp");
-        };
-    });
-    mkdirp(settings.upload.path, function (err) {
         if (err) {
             log(err.message + ".\n" + err.stack, true, "mkdirp");
         };
