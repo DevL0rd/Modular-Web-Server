@@ -23,7 +23,6 @@ const cs = require('./Devlord_modules/conSplash.js');
 const readdirp = require('readdirp');
 var NameSpace = "HTTP";
 
-
 function timeStamp() {
     // Create a date object with the current time
     var now = new Date();
