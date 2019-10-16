@@ -7,6 +7,7 @@ const fs = require('fs');
 const os = require('os');
 const { spawn, exec } = require('child_process');
 const http = require('http');
+const formidable = require('formidable');
 const crypto = require('crypto');
 const bcrypt = require("bcryptjs");
 const mime = require('mime-types')
@@ -141,6 +142,11 @@ function loadProjectFile(nProjectPath) {
             "directoryIndex": ["index.html"],
             "webRoot": projectPath + "/WebRoot",
             "pluginsPath": projectPath + "/Plugins",
+            "upload": {
+                "enabled": true,
+                "limitMB": 0,
+                "path": projectPath + "/Uploads"
+            },
             "throttling": {
                 "videoBitRateKB": 51000,
                 "audioBitRateKB": 230,
@@ -201,6 +207,11 @@ function loadProjectFile(nProjectPath) {
         };
     });
     mkdirp(settings.logging.directory, function (err) {
+        if (err) {
+            log(err.message + ".\n" + err.stack, true, "mkdirp");
+        };
+    });
+    mkdirp(settings.upload.path, function (err) {
         if (err) {
             log(err.message + ".\n" + err.stack, true, "mkdirp");
         };
@@ -797,14 +808,7 @@ function Http_Handler(request, response) {
     }
     var urlParts = url.parse(request.url);
     var reqPath = decodeURI(urlParts.pathname);
-    var requestIsPath = !reqPath.includes(".");
-    if (requestIsPath && reqPath.substr(reqPath.length - 1) != "/") {
-        response.writeHead(301, {
-            'Location': reqPath + "/"
-        });
-        response.end()
-        return;
-    }
+
 
     if (routes[request.method] && routes[request.method][reqPath]) {
         reqPath = routes[request.method][reqPath]
@@ -816,30 +820,19 @@ function Http_Handler(request, response) {
         response.end()
         return;
     }
-    if (request.method == 'POST') {
-        var body = '';
-        var received = 0;
-        request.on('data', function (data) {
-            body += data;
-            received += data.length;
-            if (received > settings.maxPostSizeMB * 1000000) {
-                log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "' too large!", true, "HTTP");
-                request.destroy();
-            }
-        });
-        request.on('end', function () {
-            log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "'", false, "HTTP");
-            for (i in events["post"]) {
-                if (events["post"][i].callback(request, response, urlParts, body)) {
-                    break;
-                }
-            }
-        });
-    } else if (request.method == 'GET') {
+    if (request.method == 'GET') {
         for (i in events["get"]) {
             if (events["get"][i].callback(request, response, urlParts)) {
                 return;
             }
+        }
+        var requestIsPath = !reqPath.includes(".");
+        if (requestIsPath && reqPath.substr(reqPath.length - 1) != "/") {
+            response.writeHead(301, {
+                'Location': reqPath + "/"
+            });
+            response.end()
+            return;
         }
         if (requestIsPath) {
             for (i in settings.directoryIndex) {
@@ -851,8 +844,6 @@ function Http_Handler(request, response) {
                 }
             }
         }
-
-
         var fullPath = settings.webRoot + reqPath
         if (requestIsPath) {
             log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' not found!", true, "HTTP");
@@ -914,16 +905,72 @@ function Http_Handler(request, response) {
                 return;
             }
         });
+    } else if (request.method == 'POST') {
+        log("[" + request.connection.remoteAddress + "] <POST> '" + reqPath + "'", false, "HTTP");
+        for (i in events["post"]) {
+            if (events["post"][i].callback(request, response, urlParts)) {
+                break;
+            }
+        }
+        if (settings.upload.enabled && request.url == '/upload') {
+            handleUpload(request, response, urlParts, reqPath);
+        } else {
+            log("[" + request.connection.remoteAddress + "] <PUT> '" + reqPath + "' not supported.", true, "HTTP");
+            response.writeHead(404);
+            response.end();
+        }
+    } else if (request.method == 'PUT') {
+        for (i in events["put"]) {
+            if (events["put"][i].callback(request, response, urlParts)) {
+                return;
+            }
+        }
+        if (settings.upload.enabled && request.url == '/upload') {
+            handleUpload(request, response, urlParts, reqPath);
+        } else {
+            log("[" + request.connection.remoteAddress + "] <PUT> '" + reqPath + "' not supported.", true, "HTTP");
+            response.writeHead(404);
+            response.end();
+        }
     } else if (request.method == 'BREW') {
-        response.writeHead(418)
-        response.end()
+        response.writeHead(418);
+        response.end();
     } else {
         log("[" + request.connection.remoteAddress + "] <UNKOWN METHOD> '" + request.method + "'", true, "HTTP");
-        response.writeHead(501)
-        response.end()
+        response.writeHead(501);
+        response.end();
     }
 }
-
+function handleUpload(request, response, urlParts, reqPath) {
+    var form = new formidable.IncomingForm();
+    var fileSize = Number(request.headers['content-length']);
+    var uploadSizeLimitBytes = settings.upload.limitMB * 1000000;
+    console.log(uploadSizeLimitBytes + " - " + fileSize);
+    if (!settings.upload.limitMB || fileSize <= uploadSizeLimitBytes) {
+        form.parse(request, function (err, fields, files) {
+            for (i in files) {
+                var file = files[i];
+                for (i in events["upload"]) {
+                    if (events["upload"][i].callback(request, response, urlParts, file, fields)) {
+                        return;
+                    }
+                }
+                var oldpath = file.path;
+                var newpath = settings.upload.path + "/" + file.name;
+                fs.rename(oldpath, newpath, function (err) {
+                    if (err) throw err;
+                    log("[" + request.connection.remoteAddress + "] <" + request.method + "> '" + newpath + "' file uploaded.", false, "HTTP");
+                    response.writeHead(200);
+                    response.end();
+                });
+            }
+        });
+    } else {
+        log("[" + request.connection.remoteAddress + "] <" + request.method + "> '" + reqPath + "' file uploaded was too large. (" + fileSize / 1000000 + "MB)", true, "HTTP");
+        response.writeHead(413);
+        response.end();
+    }
+}
 function sendFile(reqPath, request, response, callback) {
     fs.stat(reqPath, function (err, stat) {
         if (!err) {
@@ -948,7 +995,6 @@ function sendFile(reqPath, request, response, callback) {
         } else {
             log(err.message + ".\n" + err.stack, true, "HTTP");
         }
-
     });
 }
 
@@ -965,8 +1011,7 @@ function buildHeader(mimeType = "application/octet-stream", stat, otherOptions =
     return header;
 }
 
-function sendByteRange(reqPath, request, response, callback) {
-    var fullPath = settings.webRoot + reqPath;
+function sendByteRange(fullPath, request, response, callback) {
     fs.stat(fullPath, function (err, stat) {
         if (!err) {
             var total = stat.size;
@@ -979,7 +1024,7 @@ function sendByteRange(reqPath, request, response, callback) {
             start = isNaN(start) ? 0 : start
             var chunksize = (end - start);
             if (start >= 0 && start <= end && end <= total - 1) {
-                var mimeType = getMime(reqPath);
+                var mimeType = getMime(fullPath);
                 var header = buildHeader(mimeType, stat, {
                     'Content-Range': 'bytes ' + start + '-' + end + '/' + total,
                     'Content-Length': start == end ? 0 : (end - start + 1),
@@ -997,7 +1042,7 @@ function sendByteRange(reqPath, request, response, callback) {
 
                 });
             } else {
-                log("[" + request.connection.remoteAddress + "] <GET> '" + reqPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true, "HTTP");
+                log("[" + request.connection.remoteAddress + "] <GET> '" + fullPath + "' Invalid byte range! (" + start + '-' + end + '/' + total + ")", true, "HTTP");
                 var header = buildHeader(mimeType, stat, {
                     'Content-Range': 'bytes */' + stat.size
                 });
@@ -1265,8 +1310,10 @@ var events = {
     "exit": [],
     "connection": [],
     "disconnect": [],
-    "post": [],
     "get": [],
+    "post": [],
+    "put": [],
+    "upload": [],
     "log": [],
     "loadedPlugin": [],
     "loadedPlugins": [],
