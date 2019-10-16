@@ -942,6 +942,11 @@ function Http_Handler(request, response) {
     }
 }
 function handleUpload(request, response, urlParts, reqPath) {
+    for (i in events["upload"]) {
+        if (events["upload"][i].callback(request, response, urlParts)) {
+            return;
+        }
+    }
     var form = new formidable.IncomingForm();
     var fileSize = Number(request.headers['content-length']);
     var uploadSizeLimitBytes = settings.upload.limitMB * 1000000;
@@ -950,18 +955,21 @@ function handleUpload(request, response, urlParts, reqPath) {
         form.parse(request, function (err, fields, files) {
             for (i in files) {
                 var file = files[i];
-                for (i in events["upload"]) {
-                    if (events["upload"][i].callback(request, response, urlParts, file, fields)) {
-                        return;
-                    }
-                }
                 var oldpath = file.path;
                 var newpath = settings.upload.path + "/" + file.name;
                 fs.rename(oldpath, newpath, function (err) {
-                    if (err) throw err;
+                    if (err) {
+
+                        return;
+                    };
                     log("[" + request.connection.remoteAddress + "] <" + request.method + "> '" + newpath + "' file uploaded.", false, "HTTP");
                     response.writeHead(200);
                     response.end();
+                    for (i in events["uploadComplete"]) {
+                        if (events["uploadComplete"][i].callback(request, response, urlParts, newpath, fields)) {
+                            return;
+                        }
+                    }
                 });
             }
         });
@@ -1314,6 +1322,7 @@ var events = {
     "post": [],
     "put": [],
     "upload": [],
+    "uploadComplete": [],
     "log": [],
     "loadedPlugin": [],
     "loadedPlugins": [],
