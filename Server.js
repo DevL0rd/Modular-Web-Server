@@ -950,27 +950,13 @@ function handleUpload(request, response, urlParts, reqPath) {
     var form = new formidable.IncomingForm();
     var fileSize = Number(request.headers['content-length']);
     var uploadSizeLimitBytes = settings.upload.limitMB * 1000000;
-    console.log(uploadSizeLimitBytes + " - " + fileSize);
     if (!settings.upload.limitMB || fileSize <= uploadSizeLimitBytes) {
         form.parse(request, function (err, fields, files) {
             for (i in files) {
                 var file = files[i];
-                var oldpath = file.path;
-                var newpath = settings.upload.path + "/" + file.name;
-                fs.rename(oldpath, newpath, function (err) {
-                    if (err) {
-
-                        return;
-                    };
-                    log("[" + request.connection.remoteAddress + "] <" + request.method + "> '" + newpath + "' file uploaded.", false, "HTTP");
-                    response.writeHead(200);
-                    response.end();
-                    for (i in events["uploadComplete"]) {
-                        if (events["uploadComplete"][i].callback(request, response, urlParts, newpath, fields)) {
-                            return;
-                        }
-                    }
-                });
+                for (i in events["uploadComplete"]) {
+                    events["uploadComplete"][i].callback(request, response, urlParts, file, fields);
+                }
             }
         });
     } else {
